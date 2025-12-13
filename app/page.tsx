@@ -10,7 +10,7 @@ export default function Home() {
         <p className="text-center mb-8 text-lg">
           Welcome to your Next.js application with Supabase integration
         </p>
-        <div className="flex gap-4 justify-center">
+        <div className="flex gap-4 justify-center flex-wrap">
           <Link
             href="/examples/database"
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -22,6 +22,12 @@ export default function Home() {
             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
           >
             Storage Examples
+          </Link>
+          <Link
+            href="/examples/ai-personas"
+            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+          >
+            AI Personas
           </Link>
         </div>
       </div>

@@ -17,12 +17,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/f1shyfang/lyra_hackathon/issues"
   },
   "homepage": "https://github.com/f1shyfang/lyra_hackathon#readme",
   "dependencies": {
+    "@google/genai": "^1.33.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.87.1",
     "@types/node": "^25.0.1",
@@ -38,6 +38,6 @@
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.0.10",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.18"
+    "tailwindcss": "^3.4.19"
   }
 }
