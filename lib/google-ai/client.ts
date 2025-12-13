@@ -45,6 +45,10 @@ Respond ONLY with valid JSON, no additional text.`
       contents: prompt,
     })
 
+    if (!response.text) {
+      throw new Error('No response text from AI model')
+    }
+
     const text = response.text.trim()
     
     // Try to extract JSON from the response
@@ -92,6 +96,10 @@ Respond ONLY with valid JSON, no additional text.`
       model,
       contents: prompt,
     })
+
+    if (!response.text) {
+      throw new Error('No response text from AI model')
+    }
 
     const text = response.text.trim()
     

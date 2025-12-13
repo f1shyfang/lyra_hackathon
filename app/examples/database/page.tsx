@@ -24,8 +24,8 @@ export default function DatabaseExample() {
         
         // For now, we'll just test the connection
         const { data: result, error: queryError } = await supabase
-          .from('_test_connection')
-          .select('*')
+          .from('drafts')
+          .select('id')
           .limit(1)
           .maybeSingle()
 

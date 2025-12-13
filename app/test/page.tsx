@@ -32,12 +32,12 @@ export default function TestPage() {
       setLoading(true)
       setError(null)
       const { data, error: fetchError } = await supabase
-        .from('contact_submissions')
+        .from('contact_submissions' as any)
         .select('*')
         .order('created_at', { ascending: false })
 
       if (fetchError) throw fetchError
-      setSubmissions(data || [])
+      setSubmissions((data as unknown as ContactSubmission[]) || [])
     } catch (err: any) {
       setError(err.message || 'Failed to fetch submissions')
       console.error('Error fetching submissions:', err)
@@ -56,8 +56,8 @@ export default function TestPage() {
     try {
       setError(null)
       const { data, error: insertError } = await supabase
-        .from('contact_submissions')
-        .insert([formData])
+        .from('contact_submissions' as any)
+        .insert([formData as any])
         .select()
 
       if (insertError) throw insertError
@@ -77,7 +77,7 @@ export default function TestPage() {
     try {
       setError(null)
       const { error: updateError } = await supabase
-        .from('contact_submissions')
+        .from('contact_submissions' as any)
         .update({ status: newStatus })
         .eq('id', id)
 
@@ -96,7 +96,7 @@ export default function TestPage() {
     try {
       setError(null)
       const { error: deleteError } = await supabase
-        .from('contact_submissions')
+        .from('contact_submissions' as any)
         .delete()
         .eq('id', id)
 
