@@ -29,6 +29,12 @@ export default function Home() {
           >
             AI Personas
           </Link>
+          <Link
+            href="/examples/gemini"
+            className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
+          >
+            Gemini API Test
+          </Link>
         </div>
       </div>
     </main>
