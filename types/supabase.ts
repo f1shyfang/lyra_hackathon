@@ -14,6 +14,146 @@ export type Database = {
   }
   public: {
     Tables: {
+      ab_test_evaluations: {
+        Row: {
+          ab_test_id: string
+          created_at: string
+          id: string
+          persona_id: string
+          preference_rank: number | null
+          score: number
+          variant_id: string
+        }
+        Insert: {
+          ab_test_id: string
+          created_at?: string
+          id?: string
+          persona_id: string
+          preference_rank?: number | null
+          score: number
+          variant_id: string
+        }
+        Update: {
+          ab_test_id?: string
+          created_at?: string
+          id?: string
+          persona_id?: string
+          preference_rank?: number | null
+          score?: number
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_test_evaluations_ab_test_id_fkey"
+            columns: ["ab_test_id"]
+            isOneToOne: false
+            referencedRelation: "ab_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ab_test_evaluations_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "ai_personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ab_test_evaluations_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "ab_test_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ab_test_variants: {
+        Row: {
+          ab_test_id: string
+          avg_score: number | null
+          content: string
+          created_at: string
+          id: string
+          name: string
+          total_evaluations: number
+          total_score: number
+          win_rate: number | null
+        }
+        Insert: {
+          ab_test_id: string
+          avg_score?: number | null
+          content: string
+          created_at?: string
+          id?: string
+          name: string
+          total_evaluations?: number
+          total_score?: number
+          win_rate?: number | null
+        }
+        Update: {
+          ab_test_id?: string
+          avg_score?: number | null
+          content?: string
+          created_at?: string
+          id?: string
+          name?: string
+          total_evaluations?: number
+          total_score?: number
+          win_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_test_variants_ab_test_id_fkey"
+            columns: ["ab_test_id"]
+            isOneToOne: false
+            referencedRelation: "ab_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ab_tests: {
+        Row: {
+          algorithm: string
+          created_at: string
+          draft_id: string
+          ended_at: string | null
+          epsilon: number | null
+          id: string
+          name: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["ab_test_status"]
+        }
+        Insert: {
+          algorithm?: string
+          created_at?: string
+          draft_id: string
+          ended_at?: string | null
+          epsilon?: number | null
+          id?: string
+          name: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["ab_test_status"]
+        }
+        Update: {
+          algorithm?: string
+          created_at?: string
+          draft_id?: string
+          ended_at?: string | null
+          epsilon?: number | null
+          id?: string
+          name?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["ab_test_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_tests_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_personas: {
         Row: {
           active: boolean | null
@@ -35,6 +175,93 @@ export type Database = {
         }
         Relationships: []
       }
+      council_feedback: {
+        Row: {
+          created_at: string
+          cringe_score: number
+          critique: string
+          draft_id: string
+          excitement_score: number
+          id: string
+          iteration_number: number
+          persona_id: string
+          specific_fix: string | null
+        }
+        Insert: {
+          created_at?: string
+          cringe_score: number
+          critique: string
+          draft_id: string
+          excitement_score: number
+          id?: string
+          iteration_number?: number
+          persona_id: string
+          specific_fix?: string | null
+        }
+        Update: {
+          created_at?: string
+          cringe_score?: number
+          critique?: string
+          draft_id?: string
+          excitement_score?: number
+          id?: string
+          iteration_number?: number
+          persona_id?: string
+          specific_fix?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "council_feedback_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "council_feedback_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "ai_personas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drafts: {
+        Row: {
+          avg_cringe_score: number | null
+          avg_excitement_score: number | null
+          content: string
+          created_at: string
+          id: string
+          iteration_count: number
+          quality_score: number | null
+          status: Database["public"]["Enums"]["draft_status"]
+          updated_at: string
+        }
+        Insert: {
+          avg_cringe_score?: number | null
+          avg_excitement_score?: number | null
+          content: string
+          created_at?: string
+          id?: string
+          iteration_count?: number
+          quality_score?: number | null
+          status?: Database["public"]["Enums"]["draft_status"]
+          updated_at?: string
+        }
+        Update: {
+          avg_cringe_score?: number | null
+          avg_excitement_score?: number | null
+          content?: string
+          created_at?: string
+          id?: string
+          iteration_count?: number
+          quality_score?: number | null
+          status?: Database["public"]["Enums"]["draft_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -43,7 +270,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      ab_test_status: "draft" | "running" | "paused" | "completed"
+      draft_status:
+        | "pending"
+        | "processing"
+        | "approved"
+        | "rejected"
+        | "shipped"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -170,6 +403,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      ab_test_status: ["draft", "running", "paused", "completed"],
+      draft_status: [
+        "pending",
+        "processing",
+        "approved",
+        "rejected",
+        "shipped",
+      ],
+    },
   },
 } as const
