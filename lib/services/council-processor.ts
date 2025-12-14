@@ -23,7 +23,18 @@ export async function runSimulation(
 ): Promise<CouncilProcessingResult> {
   const supabase = await createClient()
 
-  // 1. Fetch all active personas
+  // 1. Fetch draft to get image URLs
+  const { data: draft, error: draftError } = await supabase
+    .from('drafts')
+    .select('image_urls')
+    .eq('id', draftId)
+    .single()
+
+  if (draftError) {
+    throw new Error(`Failed to fetch draft: ${draftError.message}`)
+  }
+
+  // 2. Fetch all active personas
   const { data: personas, error: personasError } = await supabase
     .from('ai_personas')
     .select('*')
@@ -37,18 +48,24 @@ export async function runSimulation(
     throw new Error('No active personas found')
   }
 
-  // 2. Update draft status to processing
+  // 3. Update draft status to processing
   await supabase
     .from('drafts')
     .update({ status: 'processing' })
     .eq('id', draftId)
 
-  // 3. Parallel Processing - Call Gemini Nano for each persona
+  // 4. Prepare multimodal content
+  const multimodalContent = {
+    text: content,
+    imageUrls: (draft?.image_urls as string[] | null) || undefined,
+  }
+
+  // 5. Parallel Processing - Call Gemini Nano for each persona
   const critiquePromises = personas.map(async (persona: Persona) => {
     try {
       const critique = await getPersonaCritique(
         persona.system_prompt || '',
-        content
+        multimodalContent
       )
 
       // Save feedback to database

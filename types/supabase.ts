@@ -73,6 +73,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          image_urls: string[] | null
           name: string
           total_evaluations: number
           total_score: number
@@ -84,6 +85,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          image_urls?: string[] | null
           name: string
           total_evaluations?: number
           total_score?: number
@@ -95,6 +97,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          image_urls?: string[] | null
           name?: string
           total_evaluations?: number
           total_score?: number
@@ -233,6 +236,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          image_urls: string[] | null
           iteration_count: number
           quality_score: number | null
           status: Database["public"]["Enums"]["draft_status"]
@@ -244,6 +248,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          image_urls?: string[] | null
           iteration_count?: number
           quality_score?: number | null
           status?: Database["public"]["Enums"]["draft_status"]
@@ -255,6 +260,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          image_urls?: string[] | null
           iteration_count?: number
           quality_score?: number | null
           status?: Database["public"]["Enums"]["draft_status"]

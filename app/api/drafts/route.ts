@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { uploadImages } from '@/lib/storage/image-upload'
 
 export async function POST(request: NextRequest) {
   try {
-    const { content } = await request.json()
+    const formData = await request.formData()
+    const content = formData.get('content') as string | null
+    const imageFiles = formData.getAll('images') as File[]
 
+    // Validate content
     if (!content || typeof content !== 'string' || content.trim().length === 0) {
       return NextResponse.json(
         { error: 'Content is required and must be a non-empty string' },
@@ -14,24 +18,63 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    const { data: draft, error } = await supabase
+    // Create draft first to get the ID
+    const { data: draft, error: draftError } = await supabase
       .from('drafts')
       .insert({
         content: content.trim(),
         status: 'pending',
+        image_urls: [],
       })
       .select()
       .single()
 
-    if (error) {
-      console.error('Error creating draft:', error)
+    if (draftError) {
+      console.error('Error creating draft:', draftError)
       return NextResponse.json(
-        { error: `Failed to create draft: ${error.message}` },
+        { error: `Failed to create draft: ${draftError.message}` },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ success: true, draft }, { status: 201 })
+    // Upload images if provided
+    let imageUrls: string[] = []
+    if (imageFiles.length > 0 && imageFiles[0].size > 0) {
+      try {
+        const uploadedImages = await uploadImages(imageFiles.filter(f => f.size > 0), draft.id)
+        imageUrls = uploadedImages.map(img => img.url)
+
+        // Update draft with image URLs
+        const { error: updateError } = await supabase
+          .from('drafts')
+          .update({ image_urls: imageUrls })
+          .eq('id', draft.id)
+
+        if (updateError) {
+          console.error('Error updating draft with images:', updateError)
+          // Don't fail the request, just log the error
+        }
+      } catch (uploadError) {
+        console.error('Error uploading images:', uploadError)
+        // Continue without images if upload fails
+      }
+    }
+
+    // Fetch updated draft
+    const { data: updatedDraft, error: fetchError } = await supabase
+      .from('drafts')
+      .select('*')
+      .eq('id', draft.id)
+      .single()
+
+    if (fetchError) {
+      console.error('Error fetching updated draft:', fetchError)
+    }
+
+    return NextResponse.json(
+      { success: true, draft: updatedDraft || draft },
+      { status: 201 }
+    )
   } catch (error) {
     console.error('Error in POST /api/drafts:', error)
     return NextResponse.json(

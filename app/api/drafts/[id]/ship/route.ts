@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { evaluateQuality } from '@/lib/services/quality-gate'
+import { uploadImages } from '@/lib/storage/image-upload'
 
 export async function POST(
   request: NextRequest,
@@ -8,8 +9,8 @@ export async function POST(
 ) {
   try {
     const { id } = await params
-    const { name, variants, algorithm = 'epsilon_greedy', epsilon = 0.1 } = await request.json()
-
+    const contentType = request.headers.get('content-type') || ''
+    
     const supabase = await createClient()
 
     // Get draft
@@ -32,6 +33,54 @@ export async function POST(
       return NextResponse.json(
         { error: `Draft does not pass quality gate: ${qualityResult.reason}` },
         { status: 400 }
+      )
+    }
+
+    let name: string
+    let variants: Array<{ content: string; imageUrls?: string[] }>
+    let algorithm: string
+    let epsilon: number
+
+    // Handle multipart/form-data (with images)
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      name = formData.get('name') as string
+      algorithm = (formData.get('algorithm') as string) || 'epsilon_greedy'
+      epsilon = parseFloat((formData.get('epsilon') as string) || '0.1')
+
+      // Parse variants from form data
+      const variantCount = parseInt((formData.get('variantCount') as string) || '2', 10)
+      variants = []
+
+      for (let i = 0; i < variantCount; i++) {
+        const content = (formData.get(`variants[${i}][content]`) as string) || ''
+        const imageFiles = formData.getAll(`variants[${i}][images]`) as File[]
+
+        let imageUrls: string[] = []
+        if (imageFiles.length > 0 && imageFiles[0].size > 0) {
+          try {
+            // Create a temporary draft ID for variant images
+            const tempVariantId = `variant-${id}-${i}`
+            const uploadedImages = await uploadImages(
+              imageFiles.filter(f => f.size > 0),
+              tempVariantId
+            )
+            imageUrls = uploadedImages.map(img => img.url)
+          } catch (uploadError) {
+            console.error(`Error uploading images for variant ${i}:`, uploadError)
+          }
+        }
+
+        variants.push({ content: content.trim(), imageUrls })
+      }
+    } else {
+      // Handle JSON (backward compatible)
+      const body = await request.json()
+      name = body.name
+      algorithm = body.algorithm || 'epsilon_greedy'
+      epsilon = body.epsilon || 0.1
+      variants = (body.variants || []).map((v: string | { content: string; imageUrls?: string[] }) => 
+        typeof v === 'string' ? { content: v.trim() } : v
       )
     }
 
@@ -65,10 +114,11 @@ export async function POST(
     }
 
     // Create variants
-    const variantInserts = variants.map((content: string, index: number) => ({
+    const variantInserts = variants.map((variant, index: number) => ({
       ab_test_id: abTest.id,
       name: `variant_${String.fromCharCode(97 + index)}`, // variant_a, variant_b, etc.
-      content: content.trim(),
+      content: variant.content,
+      image_urls: variant.imageUrls || [],
     }))
 
     const { data: createdVariants, error: variantsError } = await supabase

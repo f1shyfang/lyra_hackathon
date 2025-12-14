@@ -29,9 +29,15 @@ export default function DraftDetailPage() {
   const [shipFormData, setShipFormData] = useState({
     name: '',
     variants: ['', ''],
+    variantImages: [[], []] as File[][],
+    variantImagePreviews: [[], []] as string[][],
     algorithm: 'epsilon_greedy',
     epsilon: 0.1,
   })
+  const [editingImages, setEditingImages] = useState(false)
+  const [selectedImages, setSelectedImages] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [deletingImages, setDeletingImages] = useState<string[]>([])
 
   useEffect(() => {
     fetchDraft()
@@ -86,8 +92,9 @@ export default function DraftDetailPage() {
   const handleShip = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!shipFormData.name.trim() || shipFormData.variants.filter(v => v.trim()).length < 2) {
-      setError('Name and at least 2 variants are required')
+    const validVariants = shipFormData.variants.filter(v => v.trim() || shipFormData.variantImages[shipFormData.variants.indexOf(v)]?.length > 0)
+    if (!shipFormData.name.trim() || validVariants.length < 2) {
+      setError('Name and at least 2 variants (with text or images) are required')
       return
     }
 
@@ -95,17 +102,22 @@ export default function DraftDetailPage() {
       setShipping(true)
       setError(null)
 
+      const formData = new FormData()
+      formData.append('name', shipFormData.name.trim())
+      formData.append('algorithm', shipFormData.algorithm)
+      formData.append('epsilon', shipFormData.epsilon.toString())
+      formData.append('variantCount', shipFormData.variants.length.toString())
+
+      shipFormData.variants.forEach((variant, index) => {
+        formData.append(`variants[${index}][content]`, variant.trim())
+        shipFormData.variantImages[index]?.forEach((file) => {
+          formData.append(`variants[${index}][images]`, file)
+        })
+      })
+
       const response = await fetch(`/api/drafts/${draftId}/ship`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: shipFormData.name.trim(),
-          variants: shipFormData.variants.filter(v => v.trim()),
-          algorithm: shipFormData.algorithm,
-          epsilon: shipFormData.epsilon,
-        }),
+        body: formData,
       })
 
       const data = await response.json()
@@ -204,9 +216,121 @@ export default function DraftDetailPage() {
               {draft.status}
             </span>
           </div>
-          <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
-            {draft.content}
-          </p>
+          {draft.content && (
+            <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap mb-4">
+              {draft.content}
+            </p>
+          )}
+          
+          {/* Images */}
+          {draft.image_urls && (draft.image_urls as string[]).length > 0 && (
+            <div className="mt-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Images ({(draft.image_urls as string[]).length})
+                </h3>
+                {draft.status === 'pending' && (
+                  <button
+                    onClick={() => setEditingImages(!editingImages)}
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    {editingImages ? 'Cancel' : 'Edit Images'}
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {(draft.image_urls as string[])
+                  .filter(url => !deletingImages.includes(url))
+                  .map((url, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Draft image ${index + 1}`}
+                        className="w-full h-48 object-cover rounded-lg border border-gray-300 dark:border-gray-600"
+                      />
+                      {editingImages && (
+                        <button
+                          onClick={() => setDeletingImages([...deletingImages, url])}
+                          className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Delete image"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Image Upload/Edit */}
+          {editingImages && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                Add New Images
+              </label>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                multiple
+                onChange={(e) => {
+                  if (e.target.files) {
+                    const files = Array.from(e.target.files)
+                    setSelectedImages(files)
+                    const previews = files.map(file => URL.createObjectURL(file))
+                    setImagePreviews(previews)
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              {imagePreviews.length > 0 && (
+                <div className="mt-2 grid grid-cols-4 gap-2">
+                  {imagePreviews.map((preview, idx) => (
+                    <div key={idx} className="relative">
+                      <img
+                        src={preview}
+                        alt={`Preview ${idx + 1}`}
+                        className="w-full h-24 object-cover rounded border"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={async () => {
+                  try {
+                    const formData = new FormData()
+                    formData.append('content', draft.content)
+                    selectedImages.forEach(img => formData.append('images', img))
+                    deletingImages.forEach(url => formData.append('deleteImageUrls', url))
+
+                    const response = await fetch(`/api/drafts/${draftId}`, {
+                      method: 'PATCH',
+                      body: formData,
+                    })
+
+                    if (!response.ok) {
+                      throw new Error('Failed to update images')
+                    }
+
+                    setEditingImages(false)
+                    setSelectedImages([])
+                    imagePreviews.forEach(url => URL.revokeObjectURL(url))
+                    setImagePreviews([])
+                    setDeletingImages([])
+                    await fetchDraft()
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Failed to update images')
+                  }
+                }}
+                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Save Changes
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Quality Scores */}
@@ -334,27 +458,70 @@ export default function DraftDetailPage() {
                   Variants (at least 2)
                 </label>
                 {shipFormData.variants.map((variant, index) => (
-                  <textarea
-                    key={index}
-                    value={variant}
-                    onChange={(e) => {
-                      const newVariants = [...shipFormData.variants]
-                      newVariants[index] = e.target.value
-                      setShipFormData({ ...shipFormData, variants: newVariants })
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 mb-2"
-                    rows={3}
-                    placeholder={`Variant ${String.fromCharCode(97 + index)}`}
-                  />
+                  <div key={index} className="mb-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                      Variant {String.fromCharCode(97 + index)}
+                    </label>
+                    <textarea
+                      value={variant}
+                      onChange={(e) => {
+                        const newVariants = [...shipFormData.variants]
+                        newVariants[index] = e.target.value
+                        setShipFormData({ ...shipFormData, variants: newVariants })
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 mb-2"
+                      rows={3}
+                      placeholder="Variant text content (optional if images provided)"
+                    />
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">
+                        Images (optional)
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        multiple
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            const files = Array.from(e.target.files)
+                            const newImages = [...shipFormData.variantImages]
+                            newImages[index] = files
+                            setShipFormData({ ...shipFormData, variantImages: newImages })
+
+                            const previews = files.map(file => URL.createObjectURL(file))
+                            const newPreviews = [...shipFormData.variantImagePreviews]
+                            newPreviews[index] = previews
+                            setShipFormData({ ...shipFormData, variantImagePreviews: newPreviews })
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      />
+                      {shipFormData.variantImagePreviews[index]?.length > 0 && (
+                        <div className="mt-2 flex gap-2 flex-wrap">
+                          {shipFormData.variantImagePreviews[index].map((preview, imgIdx) => (
+                            <div key={imgIdx} className="relative">
+                              <img
+                                src={preview}
+                                alt={`Preview ${imgIdx + 1}`}
+                                className="w-20 h-20 object-cover rounded border"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 ))}
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
                     setShipFormData({
                       ...shipFormData,
                       variants: [...shipFormData.variants, ''],
+                      variantImages: [...shipFormData.variantImages, []],
+                      variantImagePreviews: [...shipFormData.variantImagePreviews, []],
                     })
-                  }
+                  }}
                   className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   + Add Variant

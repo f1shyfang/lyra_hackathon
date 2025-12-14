@@ -163,9 +163,13 @@ async function runEpsilonGreedy(
 
     // Evaluate selected variant
     try {
+      const multimodalContent = {
+        text: selectedVariant.content,
+        imageUrls: (selectedVariant.image_urls as string[] | null) || undefined,
+      }
       const evaluation = await getPersonaVariantEvaluation(
         persona.system_prompt || '',
-        selectedVariant.content
+        multimodalContent
       )
 
       // Save evaluation
@@ -229,9 +233,13 @@ async function runFixedSplit(
     const variant = variants[variantIndex]
 
     try {
+      const multimodalContent = {
+        text: variant.content,
+        imageUrls: (variant.image_urls as string[] | null) || undefined,
+      }
       const evaluation = await getPersonaVariantEvaluation(
         persona.system_prompt || '',
-        variant.content
+        multimodalContent
       )
 
       await supabase

@@ -17,17 +17,90 @@ export interface VariantEvaluationResponse {
   feedback?: string
 }
 
+export interface MultimodalContent {
+  text?: string
+  imageUrls?: string[]
+}
+
+/**
+ * Fetch image from URL and convert to base64
+ */
+async function fetchImageAsBase64(url: string): Promise<{ data: string; mimeType: string }> {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.statusText}`)
+    }
+
+    const arrayBuffer = await response.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    const base64 = buffer.toString('base64')
+
+    // Determine MIME type from response or URL
+    const contentType = response.headers.get('content-type') || 'image/jpeg'
+    const mimeType = contentType.split(';')[0].trim()
+
+    return { data: base64, mimeType }
+  } catch (error) {
+    throw new Error(`Error processing image ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+}
+
+/**
+ * Build multimodal content parts for Gemini API
+ */
+async function buildMultimodalParts(content: MultimodalContent): Promise<Array<{ text?: string; inlineData?: { data: string; mimeType: string } }>> {
+  const parts: Array<{ text?: string; inlineData?: { data: string; mimeType: string } }> = []
+
+  // Add text part if present
+  if (content.text) {
+    parts.push({ text: content.text })
+  }
+
+  // Add image parts if present
+  if (content.imageUrls && content.imageUrls.length > 0) {
+    const imagePromises = content.imageUrls.map(url => fetchImageAsBase64(url))
+    const images = await Promise.all(imagePromises)
+    
+    for (const image of images) {
+      parts.push({
+        inlineData: {
+          data: image.data,
+          mimeType: image.mimeType,
+        },
+      })
+    }
+  }
+
+  return parts
+}
+
 /**
  * Get critique from a persona for a LinkedIn post
+ * Supports both text and images (multimodal)
  */
 export async function getPersonaCritique(
   systemPrompt: string,
-  content: string,
+  content: string | MultimodalContent,
   model: string = 'gemini-2.0-flash-exp'
 ): Promise<CritiqueResponse> {
-  const prompt = `You are a LinkedIn content critic. Your role is defined by this persona: ${systemPrompt}
+  // Handle backward compatibility: string content
+  const multimodalContent: MultimodalContent = typeof content === 'string'
+    ? { text: content }
+    : content
 
-Critique this LinkedIn post: "${content}"
+  // Build prompt text
+  const contentDescription = multimodalContent.imageUrls && multimodalContent.imageUrls.length > 0
+    ? 'this LinkedIn post (including any images)'
+    : 'this LinkedIn post'
+
+  const promptText = `You are a LinkedIn content critic. Your role is defined by this persona: ${systemPrompt}
+
+Critique ${contentDescription}${multimodalContent.text ? `: "${multimodalContent.text}"` : ''}
+
+${multimodalContent.imageUrls && multimodalContent.imageUrls.length > 0
+    ? `The post includes ${multimodalContent.imageUrls.length} image(s). Evaluate both the text and visual content, considering how they work together.`
+    : ''}
 
 Provide your critique in the following JSON format:
 {
@@ -40,9 +113,20 @@ Provide your critique in the following JSON format:
 Respond ONLY with valid JSON, no additional text.`
 
   try {
+    // Build multimodal parts
+    const parts = await buildMultimodalParts({
+      text: promptText,
+      imageUrls: multimodalContent.imageUrls,
+    })
+
     const response = await ai.models.generateContent({
       model,
-      contents: prompt,
+      contents: [
+        {
+          role: 'user',
+          parts,
+        },
+      ],
     })
 
     if (!response.text) {
@@ -73,15 +157,30 @@ Respond ONLY with valid JSON, no additional text.`
 
 /**
  * Get variant evaluation from a persona for A/B testing
+ * Supports both text and images (multimodal)
  */
 export async function getPersonaVariantEvaluation(
   systemPrompt: string,
-  variantContent: string,
+  variantContent: string | MultimodalContent,
   model: string = 'gemini-2.0-flash-exp'
 ): Promise<VariantEvaluationResponse> {
-  const prompt = `You are evaluating LinkedIn post variants. Your role is defined by this persona: ${systemPrompt}
+  // Handle backward compatibility: string content
+  const multimodalContent: MultimodalContent = typeof variantContent === 'string'
+    ? { text: variantContent }
+    : variantContent
 
-Rate this LinkedIn post variant on a scale of 0-100, where 0 is terrible and 100 is excellent: "${variantContent}"
+  // Build prompt text
+  const contentDescription = multimodalContent.imageUrls && multimodalContent.imageUrls.length > 0
+    ? 'this LinkedIn post variant (including any images)'
+    : 'this LinkedIn post variant'
+
+  const promptText = `You are evaluating LinkedIn post variants. Your role is defined by this persona: ${systemPrompt}
+
+Rate ${contentDescription} on a scale of 0-100, where 0 is terrible and 100 is excellent${multimodalContent.text ? `: "${multimodalContent.text}"` : ''}
+
+${multimodalContent.imageUrls && multimodalContent.imageUrls.length > 0
+    ? `The variant includes ${multimodalContent.imageUrls.length} image(s). Evaluate both the text and visual content.`
+    : ''}
 
 Provide your evaluation in the following JSON format:
 {
@@ -92,9 +191,20 @@ Provide your evaluation in the following JSON format:
 Respond ONLY with valid JSON, no additional text.`
 
   try {
+    // Build multimodal parts
+    const parts = await buildMultimodalParts({
+      text: promptText,
+      imageUrls: multimodalContent.imageUrls,
+    })
+
     const response = await ai.models.generateContent({
       model,
-      contents: prompt,
+      contents: [
+        {
+          role: 'user',
+          parts,
+        },
+      ],
     })
 
     if (!response.text) {
