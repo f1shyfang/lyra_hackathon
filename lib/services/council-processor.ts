@@ -48,6 +48,25 @@ export async function runSimulation(
     throw new Error('No active personas found')
   }
 
+  return runSimulationWithPersonas(draftId, content, personas, draft?.image_urls as string[] | null, iterationNumber)
+}
+
+/**
+ * Run AI Council simulation with specific personas
+ */
+export async function runSimulationWithPersonas(
+  draftId: string,
+  content: string,
+  personas: Persona[],
+  imageUrls: string[] | null = null,
+  iterationNumber: number = 1
+): Promise<CouncilProcessingResult> {
+  const supabase = await createClient()
+
+  if (!personas || personas.length === 0) {
+    throw new Error('No personas provided')
+  }
+
   // 3. Update draft status to processing
   await supabase
     .from('drafts')
@@ -57,7 +76,7 @@ export async function runSimulation(
   // 4. Prepare multimodal content
   const multimodalContent = {
     text: content,
-    imageUrls: (draft?.image_urls as string[] | null) || undefined,
+    imageUrls: imageUrls || undefined,
   }
 
   // 5. Parallel Processing - Call Gemini Nano for each persona
@@ -117,7 +136,7 @@ export async function runSimulation(
     avgExcitementScore * 0.7 + (100 - avgCringeScore) * 0.3
   )
 
-  // 5. Update the draft with averages
+  // 5. Update the draft with averages and set status to completed
   const { error: updateError } = await supabase
     .from('drafts')
     .update({
@@ -125,6 +144,7 @@ export async function runSimulation(
       avg_excitement_score: avgExcitementScore,
       quality_score: qualityScore,
       iteration_count: iterationNumber,
+      status: 'completed',
     })
     .eq('id', draftId)
 

@@ -71,6 +71,8 @@ export default function SimulationPage() {
   const [files, setFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [running, setRunning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchPersonas()
@@ -144,18 +146,43 @@ export default function SimulationPage() {
     setSelected(new Set())
   }
 
-  const handleRun = () => {
+  const handleRun = async () => {
     if (selected.size === 0) return
 
-    const payload = {
-      content: prompt || '',
-      selectedPersonas: personas.filter(p => selected.has(p.id)),
-      attachedImagesCount: files.length,
-      createdAt: new Date().toISOString(),
-    }
+    try {
+      setRunning(true)
+      setError(null)
 
-    localStorage.setItem('simulation_request', JSON.stringify(payload))
-    alert('Run queued! Stored in localStorage["simulation_request"].')
+      // Create FormData
+      const formData = new FormData()
+      formData.append('content', prompt || '')
+      formData.append('personaIds', JSON.stringify(Array.from(selected)))
+      
+      // Add image files
+      files.forEach(file => {
+        formData.append('images', file)
+      })
+
+      // Call API
+      const response = await fetch('/api/simulation/run', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to run simulation')
+      }
+
+      // Navigate to results page
+      router.push(`/examples/simulation/results/${data.draftId}`)
+    } catch (err) {
+      console.error('Error running simulation:', err)
+      setError(err instanceof Error ? err.message : 'Failed to run simulation')
+    } finally {
+      setRunning(false)
+    }
   }
 
   return (
@@ -366,16 +393,30 @@ export default function SimulationPage() {
                     ← Back
                   </button>
                   <button
-                    className={`btn btnPrimary ${selected.size === 0 ? 'disabled' : ''}`}
+                    className={`btn btnPrimary ${selected.size === 0 || running ? 'disabled' : ''}`}
                     onClick={handleRun}
-                    disabled={selected.size === 0}
+                    disabled={selected.size === 0 || running}
                   >
-                    Run simulation ({selected.size})
+                    {running ? 'Running...' : `Run simulation (${selected.size})`}
                   </button>
                 </div>
               </div>
 
               <h1>SIMULATION</h1>
+
+              {error && (
+                <div style={{
+                  marginTop: '16px',
+                  padding: '12px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '14px',
+                  color: 'rgba(239, 68, 68, 0.9)',
+                  fontSize: '13px'
+                }}>
+                  Error: {error}
+                </div>
+              )}
 
               <div className="layout">
                 {/* Prompt */}
@@ -476,5 +517,6 @@ export default function SimulationPage() {
     </>
   )
 }
+
 
 
