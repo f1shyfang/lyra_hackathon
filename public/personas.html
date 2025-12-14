@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Personas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --stroke: rgba(255,255,255,.10);
+      --stroke2: rgba(255,255,255,.08);
+      --panel: rgba(255,255,255,.04);
+      --panelHover: rgba(255,255,255,.06);
+      --muted: rgba(255,255,255,.66);
+      --muted2: rgba(255,255,255,.42);
+      --accent:#6d5efc;
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --radius: 18px;
+      --radiusSm: 14px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background:
+        radial-gradient(1200px 800px at 50% 10%, rgba(109,94,252,.20), transparent 55%),
+        radial-gradient(900px 700px at 10% 90%, rgba(255,255,255,.06), transparent 60%),
+        var(--bg);
+      color: rgba(255,255,255,.92);
+      min-height:100vh;
+    }
+
+    .wrap{ padding: 28px 28px 40px; }
+    .shell{ max-width: 1480px; margin: 0 auto; }
+
+    .page{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      padding: 22px;
+    }
+
+    .glass{ background: transparent; border:none; border-radius:0; box-shadow:none; backdrop-filter:none; padding:0; }
+
+    .panel{
+      background: var(--panel);
+      border: 1px solid var(--stroke2);
+      border-radius: var(--radiusSm);
+    }
+    .muted{color:var(--muted)}
+    .muted2{color:var(--muted2)}
+
+    .topbar{ display:flex; align-items:center; justify-content:space-between; }
+    .brand{display:flex; align-items:center; gap:10px}
+    .logo{
+      width:36px;height:36px;border-radius:12px;
+      display:grid; place-items:center;
+      font-weight:800;
+    }
+
+    .header{
+      margin-top:18px;
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap: 16px;
+    }
+    h1{font-size:22px;letter-spacing:.4px}
+
+    .toolbar{
+      display:flex; align-items:center; gap:10px;
+      flex-wrap:wrap; justify-content:flex-end
+    }
+
+    .search{
+      height:40px; width:260px;
+      display:flex; align-items:center; gap:10px;
+      padding: 0 12px;
+    }
+    .search input{
+      background: transparent; border:none; outline:none; color:rgba(255,255,255,.92);
+      width:100%;
+      font-size: 13px;
+    }
+    .search input::placeholder{color: rgba(255,255,255,.35);}
+
+    .toolbtn{
+      height:40px;
+      padding:0 12px;
+      cursor:pointer;
+      display:flex; align-items:center; gap:8px;
+      font-size: 13px;
+      color: rgba(255,255,255,.86);
+      transition: background 120ms ease, border-color 120ms ease, filter 120ms ease;
+    }
+    .toolbtn:hover{background: rgba(255,255,255,.06);}
+
+    .primary{
+      height:40px;
+      padding:0 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      cursor:pointer;
+      box-shadow: 0 12px 30px rgba(0,0,0,.35);
+      transition: filter 120ms ease;
+    }
+    .primary:hover{filter: brightness(1.07);}
+
+    .runGhost{
+    background: rgba(255,255,255,.16) !important;
+    border-color: rgba(255,255,255,.28) !important;
+    color: rgba(255,255,255,.96) !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.08),
+        0 8px 20px rgba(0,0,0,.25);
+    }
+
+    .runGhost:hover{
+    background: rgba(255,255,255,.22) !important;
+    border-color: rgba(255,255,255,.36) !important;
+    }
+
+
+    .grid{
+      margin-top:16px;
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+    @media (max-width: 980px){
+      .grid{grid-template-columns: repeat(2, minmax(0, 1fr));}
+    }
+    @media (max-width: 680px){
+      .wrap{padding:18px}
+      .grid{grid-template-columns: 1fr;}
+      .search{width:100%;}
+    }
+
+    .card{
+      min-height: 170px;
+      padding: 14px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      transition: background 120ms ease;
+      position: relative;
+      overflow: visible;
+      gap: 10px;
+    }
+    .card:hover{background: var(--panelHover);}
+
+    .cardTop{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .avatar{
+      width:32px;height:32px;border-radius:12px;
+      display:grid; place-items:center;
+      font-size: 13px;
+    }
+    .dots{
+      width:32px;height:32px;border-radius:12px;
+      display:grid; place-items:center;
+      cursor:pointer;
+      transition: background 120ms ease;
+      color: rgba(255,255,255,.7);
+    }
+    .dots:hover{background: rgba(255,255,255,.06);}
+
+    .title{
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.2;
+      display:-webkit-box;
+      -webkit-line-clamp:1;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
+
+    .descPreview{
+      font-size: 12px;
+      color: rgba(255,255,255,.62);
+      line-height: 1.35;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+      min-height: 32px;
+      margin-top: 8px;
+    }
+
+    .badge{
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 12px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      white-space: nowrap;
+    }
+
+    .chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 6px;
+      max-height: 52px;
+      overflow:hidden;
+    }
+    .chip{
+      font-size: 11px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.78);
+    }
+    .chipMore{ opacity:.65; }
+
+    .menu{
+      position:absolute;
+      top: 46px;
+      right: 10px;
+      width: 200px;
+      padding: 8px;
+      border-radius: 14px;
+      background: rgba(18,22,32,.96);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      display:none;
+      z-index: 80;
+    }
+    .menu.open{display:block}
+    .menu button{
+      width:100%;
+      padding: 12px 12px;
+      border-radius: 12px;
+      border:none;
+      background: transparent;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      gap:10px;
+      color: rgba(255,255,255,.88);
+      font-size: 13px;
+    }
+    .menu button:hover{background: rgba(255,255,255,.06);}
+    .danger{color:#ff8a8a}
+
+    .filterWrap{ position: relative; }
+    .filterMenu{
+      position:absolute;
+      top: 46px;
+      right: 0;
+      width: 280px;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(18,22,32,.96);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      display:none;
+      z-index: 90;
+    }
+    .filterMenu.open{display:block}
+    .filterMenuHeader{
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom: 8px;
+    }
+    .filterTitle{
+      font-size: 12px;
+      font-weight: 800;
+      color: rgba(255,255,255,.86);
+      letter-spacing: .2px;
+    }
+    .filterClear{
+      border:none;
+      background: transparent;
+      cursor:pointer;
+      font-size: 12px;
+      color: rgba(255,255,255,.60);
+      padding: 6px 8px;
+      border-radius: 10px;
+    }
+    .filterClear:hover{background: rgba(255,255,255,.06);}
+
+    .tagList{
+      max-height: 220px;
+      overflow:auto;
+      padding-right: 4px;
+    }
+    .tagRow{
+      display:flex; align-items:center; gap:10px;
+      padding: 8px 8px;
+      border-radius: 12px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .tagRow:hover{background: rgba(255,255,255,.06);}
+    .tagRow input{ transform: translateY(1px); }
+    .tagRow span{
+      font-size: 12px;
+      color: rgba(255,255,255,.82);
+    }
+    .tagEmpty{
+      font-size: 12px;
+      color: rgba(255,255,255,.55);
+      padding: 10px 8px;
+    }
+
+    .backdrop{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center; justify-content:center;
+      padding: 18px;
+      z-index: 110;
+    }
+    .backdrop.open{display:flex}
+    .modal{
+      width:min(640px, 100%);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(18,22,32,.94);
+      box-shadow: 0 18px 70px rgba(0,0,0,.75);
+      padding: 16px;
+    }
+    .modalHeader{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      padding: 6px 4px 10px;
+    }
+    .modalTitle{
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .2px;
+    }
+    .close{
+      width:34px;height:34px;border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      cursor:pointer;
+    }
+    .close:hover{background: rgba(255,255,255,.06);}
+
+    .form{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      padding: 8px 4px;
+    }
+    label{font-size: 12px; color: rgba(255,255,255,.70);}
+    .input, .textarea{
+      width:100%;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.92);
+      padding: 10px 12px;
+      outline:none;
+      font-size: 13px;
+    }
+    .textarea{min-height: 96px; resize: vertical; line-height: 1.35;}
+    .input:focus, .textarea:focus{
+      border-color: rgba(109,94,252,.55);
+      box-shadow: 0 0 0 3px rgba(109,94,252,.18);
+    }
+
+    .tagsRow{ display:flex; gap:10px; align-items:center; }
+    .tagsRow input{flex:1}
+    .tags{
+      display:flex; flex-wrap:wrap; gap: 8px;
+      margin-top: 8px;
+    }
+    .tag{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      font-size: 12px;
+      color: rgba(255,255,255,.86);
+    }
+    .tag .x{
+      width:18px;height:18px;border-radius:999px;
+      display:grid; place-items:center;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.18);
+      cursor:pointer;
+      user-select:none;
+      line-height:1;
+    }
+    .tag .x:hover{background: rgba(255,255,255,.06);}
+
+    .modalActions{
+      display:flex; justify-content:flex-end; gap:10px;
+      padding: 10px 4px 4px;
+    }
+    .btn{
+      height: 40px;
+      padding: 0 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.90);
+      cursor:pointer;
+      font-weight: 700;
+    }
+    .btn:hover{background: rgba(255,255,255,.06);}
+    .btnPrimary{background: var(--accent); border-color: rgba(255,255,255,.10);}
+    .btnPrimary:hover{filter: brightness(1.07);}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="shell">
+      <div class="page">
+        <div class="glass">
+
+          <div class="topbar">
+            <div class="brand">
+              <div class="logo panel">◎</div>
+              <div class="muted" style="font-size:13px">Persona Simulator</div>
+            </div>
+          </div>
+
+          <div class="header">
+            <div>
+              <h1>PERSONAS</h1>
+              <div class="muted" style="font-size:13px; margin-top:6px">
+                Create and manage reviewer profiles for simulations.
+              </div>
+            </div>
+
+            <div class="toolbar">
+              <div class="search panel">
+                <span class="muted2">🔎</span>
+                <input id="search" placeholder="Search (title, desc, tag)" />
+              </div>
+
+              <div class="filterWrap">
+                <button class="toolbtn panel" id="filterBtn" type="button">
+                  <span class="muted2">⏷</span><span class="muted">Filter</span>
+                  <span id="filterCount" class="muted2" style="margin-left:6px; font-size:12px;"></span>
+                </button>
+
+                <div class="filterMenu" id="filterMenu">
+                  <div class="filterMenuHeader">
+                    <div class="filterTitle">Filter by tag</div>
+                    <button class="filterClear" id="clearTags" type="button">Clear</button>
+                  </div>
+                  <div class="tagList" id="tagList"></div>
+                </div>
+              </div>
+
+              <button class="primary" id="newBtn" type="button">+ New persona</button>
+
+              <!-- UPDATED: Run looks whitish -->
+              <button class="toolbtn panel runGhost" id="simulateBtn" type="button" title="Go to simulation">Run</button>
+            </div>
+          </div>
+
+          <div class="grid" id="grid"></div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="backdrop" id="backdrop">
+    <div class="modal">
+      <div class="modalHeader">
+        <div>
+          <div class="modalTitle">Edit persona</div>
+          <div class="muted2" style="font-size:12px; margin-top:4px">Title, description, tags.</div>
+        </div>
+        <button class="close" id="closeModal" aria-label="Close">✕</button>
+      </div>
+
+      <div class="form">
+        <div>
+          <label>Title</label>
+          <input class="input" id="titleInput" placeholder="Untitled persona" />
+        </div>
+
+        <div>
+          <label>Description</label>
+          <textarea class="textarea" id="descInput" placeholder="What is this persona like?"></textarea>
+        </div>
+
+        <div>
+          <label>Tags</label>
+          <div class="tagsRow">
+            <input class="input" id="tagInput" placeholder="Add a tag and press Enter" />
+          </div>
+          <div class="tags" id="tags"></div>
+        </div>
+      </div>
+
+      <div class="modalActions">
+        <button class="btn" id="cancelBtn" type="button">Cancel</button>
+        <button class="btn btnPrimary" id="saveBtn" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "personas";
+
+    let personas = [];
+    let filtered = [];
+
+    const selectedTags = new Set();
+
+    let editingId = null;
+    let editingTags = [];
+
+    function uid(){
+      return Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;").replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    }
+
+    function normalizePersona(p){
+      const tags = Array.isArray(p.tags) ? p.tags : [];
+      return {
+        id: p.id || uid(),
+        title: (p.title || "Untitled persona").trim(),
+        desc: p.desc || "",
+        tags: tags.map(t => String(t || "").trim()).filter(Boolean),
+      };
+    }
+
+    function load(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw){
+          personas = [
+            normalizePersona({ title: "Draft persona", desc: "A placeholder persona you can edit.", tags: ["draft"] }),
+            normalizePersona({ title: "Community-driven engineer", desc: "Values inclusivity, teaching, collaboration. Responds to community impact stories.", tags: ["community","inclusive"] }),
+            normalizePersona({ title: "OSS-first builder", desc: "Cares about code quality & maintainership. Allergic to hype; wants technical depth.", tags: ["oss","craft"] }),
+            normalizePersona({ title: "Career-optimising engineer", desc: "Cares about growth, mentorship, resume signal. Likes clear impact and trajectory.", tags: ["career","growth"] }),
+            normalizePersona({ title: "Systems thinker", desc: "Drawn to scale, constraints, failure modes. Likes postmortems & architecture tradeoffs.", tags: ["systems","architecture"] }),
+          ];
+          persist();
+          return;
+        }
+
+        const arr = JSON.parse(raw);
+        if(!Array.isArray(arr)) throw new Error("personas not array");
+        personas = arr.map(normalizePersona);
+      }catch(e){
+        console.error("load() failed:", e);
+        personas = [];
+      }
+    }
+
+    function persist(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(personas));
+    }
+
+    function iconFor(p){
+      const isDraft = (p.title || "").toLowerCase().includes("draft");
+      if(isDraft) return "◦";
+      const map = ["∙","◊","◇","•","∘"];
+      const i = (p.title.length + p.id.length) % map.length;
+      return map[i];
+    }
+
+    const grid = document.getElementById("grid");
+    const search = document.getElementById("search");
+
+    const filterBtn = document.getElementById("filterBtn");
+    const filterMenu = document.getElementById("filterMenu");
+    const tagList = document.getElementById("tagList");
+    const clearTags = document.getElementById("clearTags");
+    const filterCount = document.getElementById("filterCount");
+
+    function getAllTags(){
+      const set = new Set();
+      personas.forEach(p => (p.tags || []).forEach(t => {
+        const v = String(t || "").trim();
+        if(v) set.add(v);
+      }));
+      return Array.from(set).sort((a,b)=>a.localeCompare(b));
+    }
+
+    function renderTagPicker(){
+      const all = getAllTags();
+      tagList.innerHTML = "";
+
+      if(all.length === 0){
+        tagList.innerHTML = `<div class="tagEmpty">No tags yet. Add tags in “Edit persona”.</div>`;
+        return;
+      }
+
+      all.forEach(t => {
+        const row = document.createElement("div");
+        row.className = "tagRow";
+        row.dataset.tag = t;
+
+        const checked = selectedTags.has(t);
+        row.innerHTML = `
+          <input type="checkbox" ${checked ? "checked" : ""} />
+          <span>${escapeHtml(t)}</span>
+        `;
+
+        row.addEventListener("click", (e) => {
+          const currently = selectedTags.has(t);
+          if(currently) selectedTags.delete(t);
+          else selectedTags.add(t);
+          renderTagPicker();
+          render();
+          e.stopPropagation();
+        });
+
+        tagList.appendChild(row);
+      });
+    }
+
+    function updateFilterCount(){
+      const n = selectedTags.size;
+      filterCount.textContent = n ? `(${n})` : "";
+    }
+
+    function openFilterMenu(){
+      renderTagPicker();
+      filterMenu.classList.add("open");
+    }
+    function closeFilterMenu(){
+      filterMenu.classList.remove("open");
+    }
+
+    filterBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if(filterMenu.classList.contains("open")) closeFilterMenu();
+      else openFilterMenu();
+    });
+
+    clearTags.addEventListener("click", (e) => {
+      e.stopPropagation();
+      selectedTags.clear();
+      renderTagPicker();
+      render();
+    });
+
+    window.addEventListener("click", (e) => {
+      if(!e.target.closest(".filterWrap")){
+        closeFilterMenu();
+      }
+    });
+
+    function applyFilter(){
+      const q = (search.value || "").trim().toLowerCase();
+
+      let base = personas;
+
+      if(q){
+        base = base.filter(p => {
+          const t = (p.title || "").toLowerCase();
+          const d = (p.desc || "").toLowerCase();
+          const tags = (p.tags || []).some(tag => String(tag).toLowerCase().includes(q));
+          return t.includes(q) || d.includes(q) || tags;
+        });
+      }
+
+      if(selectedTags.size){
+        base = base.filter(p => {
+          const set = new Set((p.tags || []).map(x => String(x)));
+          for(const tag of selectedTags){
+            if(!set.has(tag)) return false;
+          }
+          return true;
+        });
+      }
+
+      filtered = base;
+      updateFilterCount();
+    }
+
+    function renderChips(tags){
+      const safe = (tags || []).map(t => String(t).trim()).filter(Boolean);
+      if(!safe.length) return ``;
+
+      const maxShow = 4;
+      const shown = safe.slice(0, maxShow);
+      const extra = safe.length - shown.length;
+
+      const chips = shown.map(t => `<span class="chip">${escapeHtml(t)}</span>`).join("");
+      const more = extra > 0 ? `<span class="chip chipMore">+${extra}</span>` : ``;
+
+      return `<div class="chips">${chips}${more}</div>`;
+    }
+
+    function render(){
+      applyFilter();
+      grid.innerHTML = "";
+
+      filtered.forEach(p => {
+        const card = document.createElement("div");
+        card.className = "card panel";
+        card.dataset.id = p.id;
+
+        const desc = (p.desc || "").trim();
+        const descHtml = desc ? escapeHtml(desc) : `<span class="muted2">No description yet.</span>`;
+        const isDraft = (p.title || "").toLowerCase().includes("draft");
+
+        card.innerHTML = `
+          <div class="cardTop">
+            <div class="avatar panel">${iconFor(p)}</div>
+
+            <div style="position:relative;">
+              <button class="dots panel" type="button" aria-label="Open menu">⋯</button>
+              <div class="menu" id="menu-${p.id}">
+                <button type="button" data-action="edit"><span class="muted">Edit</span></button>
+                <button type="button" data-action="dup"><span class="muted">Duplicate</span></button>
+                <button type="button" data-action="del"><span class="danger">Delete</span></button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+              <div class="title">${escapeHtml(p.title)}</div>
+              ${isDraft ? `<span class="badge panel muted">Draft</span>` : ``}
+            </div>
+
+            <div class="descPreview">${descHtml}</div>
+          </div>
+
+          <div>${renderChips(p.tags)}</div>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    function closeAllMenus(){
+      document.querySelectorAll(".menu").forEach(m => m.classList.remove("open"));
+    }
+
+    window.addEventListener("click", (e) => {
+      if(!e.target.closest(".menu") && !e.target.closest(".dots")){
+        closeAllMenus();
+      }
+    });
+
+    grid.addEventListener("click", (e) => {
+      const card = e.target.closest(".card");
+      if(!card) return;
+      const id = card.dataset.id;
+
+      if(e.target.closest(".dots")){
+        const menu = document.getElementById("menu-" + id);
+        const isOpen = menu.classList.contains("open");
+        closeAllMenus();
+        if(!isOpen) menu.classList.add("open");
+        return;
+      }
+
+      const actionBtn = e.target.closest("button[data-action]");
+      if(actionBtn){
+        const action = actionBtn.dataset.action;
+        closeAllMenus();
+
+        if(action === "edit") openEdit(id);
+        if(action === "dup") duplicatePersona(id);
+        if(action === "del") deletePersona(id);
+      }
+    });
+
+    function addPersona(){
+      const p = normalizePersona({ title: "Draft persona", desc:"", tags:[] });
+      personas.unshift(p);
+      persist();
+      render();
+      openEdit(p.id);
+    }
+
+    function duplicatePersona(id){
+      const p = personas.find(x => x.id === id);
+      if(!p) return;
+      const copy = normalizePersona({
+        title: (p.title || "Untitled persona") + " (copy)",
+        desc: p.desc || "",
+        tags: Array.isArray(p.tags) ? [...p.tags] : []
+      });
+      personas.unshift(copy);
+      persist();
+      render();
+    }
+
+    function deletePersona(id){
+      const idx = personas.findIndex(x => x.id === id);
+      if(idx === -1) return;
+
+      // delete immediately — no browser dialogs
+      personas.splice(idx, 1);
+
+      const remainingTags = new Set(getAllTags());
+      for(const t of Array.from(selectedTags)){
+        if(!remainingTags.has(t)) selectedTags.delete(t);
+      }
+
+      persist();
+      render();
+    }
+
+    const backdrop = document.getElementById("backdrop");
+    const closeModal = document.getElementById("closeModal");
+    const cancelBtn = document.getElementById("cancelBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const titleInput = document.getElementById("titleInput");
+    const descInput = document.getElementById("descInput");
+    const tagInput = document.getElementById("tagInput");
+    const tagsEl = document.getElementById("tags");
+
+    function openEdit(id){
+      const p = personas.find(x => x.id === id);
+      if(!p) return;
+      editingId = id;
+      titleInput.value = p.title || "";
+      descInput.value = p.desc || "";
+      editingTags = Array.isArray(p.tags) ? [...p.tags] : [];
+      renderTags();
+      backdrop.classList.add("open");
+      setTimeout(()=> titleInput.focus(), 0);
+    }
+
+    function closeEdit(){
+      editingId = null;
+      editingTags = [];
+      backdrop.classList.remove("open");
+    }
+
+    function renderTags(){
+      tagsEl.innerHTML = "";
+      editingTags.forEach((t, idx) => {
+        const tag = document.createElement("span");
+        tag.className = "tag";
+        tag.innerHTML = `${escapeHtml(t)} <span class="x" data-idx="${idx}" title="Remove">×</span>`;
+        tagsEl.appendChild(tag);
+      });
+    }
+
+    tagsEl.addEventListener("click", (e) => {
+      const x = e.target.closest(".x");
+      if(!x) return;
+      const idx = Number(x.dataset.idx);
+      editingTags.splice(idx, 1);
+      renderTags();
+    });
+
+    tagInput.addEventListener("keydown", (e) => {
+      if(e.key !== "Enter") return;
+      e.preventDefault();
+      const v = tagInput.value.trim();
+      if(!v) return;
+      const exists = editingTags.some(t => t.toLowerCase() === v.toLowerCase());
+      if(!exists) editingTags.push(v);
+      tagInput.value = "";
+      renderTags();
+    });
+
+    function saveEdit(){
+      const p = personas.find(x => x.id === editingId);
+      if(!p) return;
+
+      p.title = (titleInput.value || "Untitled persona").trim();
+      p.desc = descInput.value || "";
+      p.tags = [...editingTags].map(t => String(t).trim()).filter(Boolean);
+
+      persist();
+      render();
+
+      renderTagPicker();
+      closeEdit();
+    }
+
+    closeModal.addEventListener("click", closeEdit);
+    cancelBtn.addEventListener("click", closeEdit);
+    backdrop.addEventListener("click", (e) => {
+      if(e.target === backdrop) closeEdit();
+    });
+    saveBtn.addEventListener("click", saveEdit);
+
+    document.getElementById("newBtn").addEventListener("click", addPersona);
+    document.getElementById("simulateBtn").addEventListener("click", () => {
+      persist();
+      window.location.href = "simulation.html";
+    });
+
+    search.addEventListener("input", render);
+
+    load();
+    render();
+  </script>
+</body>
+</html>

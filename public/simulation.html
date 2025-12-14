@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Simulation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --stroke: rgba(255,255,255,.10);
+      --stroke2: rgba(255,255,255,.08);
+      --panel: rgba(255,255,255,.04);
+      --panelHover: rgba(255,255,255,.06);
+      --muted: rgba(255,255,255,.66);
+      --muted2: rgba(255,255,255,.42);
+      --accent:#6d5efc;
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --radius: 18px;
+      --radiusSm: 14px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background:
+        radial-gradient(1200px 800px at 50% 10%, rgba(109,94,252,.20), transparent 55%),
+        radial-gradient(900px 700px at 10% 90%, rgba(255,255,255,.06), transparent 60%),
+        var(--bg);
+      color: rgba(255,255,255,.92);
+      min-height:100vh;
+    }
+
+    /* MATCH personas.html */
+    .wrap{ padding: 28px 28px 40px; }
+    .shell{ max-width: 1480px; margin: 0 auto; }
+
+    .page{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      padding: 22px;
+    }
+    .glass{ background: transparent; border:none; border-radius:0; box-shadow:none; backdrop-filter:none; padding:0; }
+
+    .panel{
+      background: var(--panel);
+      border: 1px solid var(--stroke2);
+      border-radius: var(--radiusSm);
+    }
+    .muted{color:var(--muted)}
+    .muted2{color:var(--muted2)}
+
+    .topbar{ display:flex; align-items:center; justify-content:space-between; }
+    .brand{display:flex; align-items:center; gap:10px}
+    .logo{
+      width:36px;height:36px;border-radius:12px;
+      display:grid; place-items:center;
+      font-weight:800;
+    }
+
+    .btn{
+      height:40px;
+      padding:0 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.90);
+      cursor:pointer;
+      font-weight: 700;
+      transition: background 120ms ease, filter 120ms ease;
+    }
+    .btn:hover{background: rgba(255,255,255,.06);}
+    .btnPrimary{
+      background: var(--accent);
+      border-color: rgba(255,255,255,.10);
+    }
+    .btnPrimary:hover{filter: brightness(1.07);}
+    .disabled{
+      opacity:.5;
+      cursor:not-allowed;
+      filter: grayscale(30%);
+    }
+
+    h1{font-size:22px;letter-spacing:.4px;margin-top:18px}
+
+    /* Layout should “fill” more */
+    .layout{
+      margin-top:16px;
+      display:grid;
+      grid-template-columns: 1.45fr .85fr;
+      gap: 14px;
+      align-items: stretch;
+    }
+    @media (max-width: 980px){
+      .layout{grid-template-columns: 1fr;}
+      .wrap{padding:18px}
+    }
+
+    .box{padding:14px; height:100%;}
+    .labelRow{
+      display:flex; align-items:center; justify-content:space-between;
+      font-size: 11px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.55);
+    }
+
+    textarea{
+      width:100%;
+      margin-top:10px;
+      min-height: 420px;         /* bigger so it doesn't feel constrained */
+      height: 52vh;              /* grows with screen */
+      resize: vertical;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      color: rgba(255,255,255,.92);
+      padding: 12px;
+      outline:none;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    textarea:focus{
+      border-color: rgba(109,94,252,.55);
+      box-shadow: 0 0 0 3px rgba(109,94,252,.18);
+    }
+
+    .attachRow{
+      display:flex; align-items:center; gap:12px; margin-top:10px; flex-wrap:wrap;
+    }
+    .fileBtn{
+      height:40px;
+      padding:0 12px;
+      display:inline-flex; align-items:center; gap:10px;
+      cursor:pointer;
+    }
+    .thumbs{display:flex; gap:10px; flex-wrap:wrap;}
+    .thumb{
+      width:54px;height:70px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      overflow:hidden;
+      position:relative;
+    }
+    .thumb img{width:100%;height:100%;object-fit:cover;opacity:.92}
+    .thumb .x{
+      position:absolute; top:6px; right:6px;
+      width:20px;height:20px;
+      border-radius:10px;
+      display:grid; place-items:center;
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.35);
+      font-weight: 800;
+    }
+
+    .reviewHead{
+      display:flex; align-items:flex-start; justify-content:space-between; gap: 10px;
+    }
+    .linkRow{
+      font-size: 12px;
+      display:flex; gap: 8px; align-items:center;
+    }
+    .linkRow button{
+      border:none;background:none;cursor:pointer;
+      color: rgba(255,255,255,.70);
+      text-decoration: underline;
+      padding: 0;
+      font-size: 12px;
+    }
+    .linkRow button:hover{color:white}
+
+    /* bigger list area (not tiny) */
+    .list{
+      margin-top: 10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      height: calc(52vh + 60px);   /* roughly match textarea feel */
+      min-height: 420px;
+      overflow:auto;
+      padding-right: 4px;
+    }
+
+    .row{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding: 10px 12px;
+      cursor:pointer;
+      transition: background 120ms ease, border-color 120ms ease;
+    }
+    .row:hover{background: var(--panelHover);}
+    .row.selected{
+      background: rgba(109,94,252,.14);
+      border-color: rgba(109,94,252,.40);
+    }
+    .check{
+      width:20px;height:20px;
+      border-radius: 8px;
+      border:1px solid rgba(255,255,255,.18);
+      display:grid; place-items:center;
+      font-weight:900;
+    }
+    .row.selected .check{
+      border-color: rgba(109,94,252,.55);
+    }
+
+    .footer{
+      margin-top: 12px;
+      font-size: 12px;
+      color: rgba(255,255,255,.62);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="shell">
+      <div class="page">
+        <div class="glass">
+
+          <div class="topbar">
+            <div class="brand">
+              <div class="logo panel">◎</div>
+              <div class="muted" style="font-size:13px">Persona Simulator</div>
+            </div>
+
+            <div style="display:flex; gap:10px; align-items:center;">
+              <button class="btn" id="backBtn">← Back</button>
+              <button class="btn btnPrimary disabled" id="runBtn">Run simulation (0)</button>
+            </div>
+          </div>
+
+          <h1>SIMULATION</h1>
+
+          <div class="layout">
+            <!-- Prompt -->
+            <div class="panel box">
+              <div class="labelRow">
+                <div>PROMPT</div>
+                <div class="muted2" style="letter-spacing:0; text-transform:none;">Saved automatically</div>
+              </div>
+
+              <textarea id="prompt" placeholder="Paste text here..."></textarea>
+
+              <div class="attachRow">
+                <label class="panel fileBtn" for="fileInput">📎 <span class="muted">Attach media</span></label>
+                <input id="fileInput" type="file" accept="image/*" multiple style="display:none" />
+                <div class="thumbs" id="thumbs"></div>
+              </div>
+            </div>
+
+            <!-- Reviewers -->
+            <div class="panel box">
+              <div class="reviewHead">
+                <div>
+                  <div style="font-size:14px; font-weight:800;">Reviewers</div>
+                  <div class="muted" style="font-size:12px; margin-top:4px;">Select one or more reviewers to evaluate the same content.</div>
+                </div>
+
+                <div class="linkRow">
+                  <button id="selectAll" type="button">Select all</button>
+                  <span class="muted2">/</span>
+                  <button id="clearAll" type="button">Clear</button>
+                </div>
+              </div>
+
+              <div class="list" id="list"></div>
+
+              <div class="footer">
+                Selected: <span id="count">0</span> <span class="muted2">• with live updates</span><br/>
+                <span id="helper" class="muted2">Select at least 1 reviewer.</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "personas";
+    const OUT_KEY = "simulation_request";
+
+    const backBtn = document.getElementById("backBtn");
+    const runBtn = document.getElementById("runBtn");
+    const listEl = document.getElementById("list");
+    const countEl = document.getElementById("count");
+    const helperEl = document.getElementById("helper");
+    const promptEl = document.getElementById("prompt");
+
+    const fileInput = document.getElementById("fileInput");
+    const thumbs = document.getElementById("thumbs");
+    const files = [];
+
+    function loadPersonas(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return [];
+        const arr = JSON.parse(raw);
+        if(!Array.isArray(arr)) return [];
+        return arr.map(p => ({
+          id: p.id || (Math.random().toString(36).slice(2) + Date.now().toString(36)),
+          title: (p.title || "Untitled persona").trim(),
+          desc: p.desc || "",
+          tags: Array.isArray(p.tags) ? p.tags : [],
+          archived: Boolean(p.archived)
+        }));
+      }catch{
+        return [];
+      }
+    }
+
+    const personas = loadPersonas(); // no archived concept in your current personas file; keep everything
+    const selected = new Set();
+
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;").replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    }
+
+    function renderList(){
+      listEl.innerHTML = "";
+      personas.forEach(p => {
+        const row = document.createElement("div");
+        row.className = "row panel";
+        row.dataset.id = p.id;
+
+        row.innerHTML = `
+          <div style="font-size:13px; font-weight:700;">${escapeHtml(p.title)}</div>
+          <div class="check"></div>
+        `;
+
+        row.addEventListener("click", () => {
+          if(selected.has(p.id)) selected.delete(p.id);
+          else selected.add(p.id);
+          renderSelection();
+        });
+
+        listEl.appendChild(row);
+      });
+
+      renderSelection();
+    }
+
+    function renderSelection(){
+      const rows = listEl.querySelectorAll(".row");
+      rows.forEach(r => {
+        const id = r.dataset.id;
+        const isSel = selected.has(id);
+        r.classList.toggle("selected", isSel);
+        r.querySelector(".check").textContent = isSel ? "✓" : "";
+      });
+
+      countEl.textContent = String(selected.size);
+      runBtn.textContent = `Run simulation (${selected.size})`;
+
+      const ok = selected.size > 0;
+      runBtn.classList.toggle("disabled", !ok);
+      helperEl.textContent = ok ? "Ready to run." : "Select at least 1 reviewer.";
+    }
+
+    document.getElementById("selectAll").addEventListener("click", () => {
+      personas.forEach(p => selected.add(p.id));
+      renderSelection();
+    });
+
+    document.getElementById("clearAll").addEventListener("click", () => {
+      selected.clear();
+      renderSelection();
+    });
+
+    function refreshThumbs(){
+      thumbs.innerHTML = "";
+      files.forEach((file, i) => {
+        const url = URL.createObjectURL(file);
+        const t = document.createElement("div");
+        t.className = "thumb";
+        t.innerHTML = `<img alt="" src="${url}"/><div class="x" title="Remove">×</div>`;
+        t.querySelector(".x").addEventListener("click", () => {
+          URL.revokeObjectURL(url);
+          files.splice(i, 1);
+          refreshThumbs();
+        });
+        thumbs.appendChild(t);
+      });
+    }
+
+    fileInput.addEventListener("change", (e) => {
+      const picked = [...(e.target.files || [])];
+      picked.forEach(f => files.push(f));
+      fileInput.value = "";
+      refreshThumbs();
+    });
+
+    backBtn.addEventListener("click", () => {
+      window.location.href = "personas.html";
+    });
+
+    runBtn.addEventListener("click", () => {
+      if(selected.size === 0) return;
+
+      const payload = {
+        content: promptEl.value || "",
+        selectedPersonas: personas.filter(p => selected.has(p.id)),
+        attachedImagesCount: files.length,
+        createdAt: new Date().toISOString()
+      };
+
+      localStorage.setItem(OUT_KEY, JSON.stringify(payload));
+      alert("Run queued! Stored in localStorage['simulation_request'].");
+    });
+
+    renderList();
+  </script>
+</body>
+</html>
