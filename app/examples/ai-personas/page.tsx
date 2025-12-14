@@ -348,6 +348,13 @@ export default function AIPersonasPage() {
 
   return (
     <>
+      <style jsx global>{`
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+      `}</style>
       <style jsx>{`
         :root {
           --bg: #0b0f17;
