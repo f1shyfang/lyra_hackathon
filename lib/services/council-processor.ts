@@ -136,7 +136,9 @@ export async function runSimulationWithPersonas(
     avgExcitementScore * 0.7 + (100 - avgCringeScore) * 0.3
   )
 
-  // 5. Update the draft with averages and set status to completed
+  // 5. Update the draft with averages
+  // Note: Status remains as 'processing' since 'completed' is not a valid enum value
+  // The draft has been processed and results are available
   const { error: updateError } = await supabase
     .from('drafts')
     .update({
@@ -144,7 +146,6 @@ export async function runSimulationWithPersonas(
       avg_excitement_score: avgExcitementScore,
       quality_score: qualityScore,
       iteration_count: iterationNumber,
-      status: 'completed',
     })
     .eq('id', draftId)
 
