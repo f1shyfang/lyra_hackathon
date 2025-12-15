@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai'
+import { withRateLimit } from './rate-limiter'
 
 // Initialize the Google AI client
 // API key is read from GEMINI_API_KEY environment variable
@@ -119,15 +120,19 @@ Respond ONLY with valid JSON, no additional text.`
       imageUrls: multimodalContent.imageUrls,
     })
 
-    const response = await ai.models.generateContent({
-      model,
-      contents: [
-        {
-          role: 'user',
-          parts,
-        },
-      ],
-    })
+    // Make API call with rate limiting
+    const response = await withRateLimit(
+      () => ai.models.generateContent({
+        model,
+        contents: [
+          {
+            role: 'user',
+            parts,
+          },
+        ],
+      }),
+      'getPersonaCritique'
+    )
 
     if (!response.text) {
       throw new Error('No response text from AI model')
@@ -197,15 +202,19 @@ Respond ONLY with valid JSON, no additional text.`
       imageUrls: multimodalContent.imageUrls,
     })
 
-    const response = await ai.models.generateContent({
-      model,
-      contents: [
-        {
-          role: 'user',
-          parts,
-        },
-      ],
-    })
+    // Make API call with rate limiting
+    const response = await withRateLimit(
+      () => ai.models.generateContent({
+        model,
+        contents: [
+          {
+            role: 'user',
+            parts,
+          },
+        ],
+      }),
+      'getPersonaVariantEvaluation'
+    )
 
     if (!response.text) {
       throw new Error('No response text from AI model')

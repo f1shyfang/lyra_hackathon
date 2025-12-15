@@ -119,6 +119,12 @@ Test multiple post variants to find the best performing content:
    # Google Gemini API
    GEMINI_API_KEY=your_gemini_api_key
 
+   # Optional: Gemini API Rate Limiting
+   # Default: 15 requests per minute (free tier)
+   # Paid tier: 360 requests per minute
+   GEMINI_RATE_LIMIT_MAX_REQUESTS=15
+   GEMINI_RATE_LIMIT_WINDOW_MS=60000
+
    # Optional: Quality Gate Thresholds
    QUALITY_THRESHOLD_EXCITEMENT=70
    QUALITY_THRESHOLD_CRINGE=30
@@ -525,6 +531,43 @@ Drafts that pass quality gates are automatically marked as `approved`, while tho
 ---
 
 ## 🔒 Security Best Practices
+
+- **Never commit** `.env.local` to version control
+- Use **Supabase Row Level Security (RLS)** policies for data protection
+- **Rotate API keys** regularly
+- Implement **rate limiting** for production use
+- Use **environment-specific** configurations
+- Validate and sanitize all user inputs
+
+## ⚡ Rate Limiting
+
+The application includes built-in rate limiting for Gemini API calls to prevent exceeding API quotas and ensure reliable operation.
+
+### Configuration
+
+Rate limiting is configured via environment variables:
+
+- `GEMINI_RATE_LIMIT_MAX_REQUESTS` (default: `15`)
+  - Maximum number of requests allowed per time window
+  - Free tier: 15 requests per minute
+  - Paid tier: 360 requests per minute
+
+- `GEMINI_RATE_LIMIT_WINDOW_MS` (default: `60000`)
+  - Time window in milliseconds (default: 1 minute)
+
+### How It Works
+
+- Uses a **token bucket algorithm** to track requests
+- Automatically queues requests when the limit is reached
+- Waits for the next available slot before making API calls
+- Prevents 429 (Too Many Requests) errors from the Gemini API
+
+### Example
+
+If you're on the free tier (15 requests/minute) and make 20 requests:
+- First 15 requests execute immediately
+- Remaining 5 requests wait until slots become available
+- Requests are automatically queued and processed in order
 
 ---
 
