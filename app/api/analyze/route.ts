@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { createAdminClient } from '@/lib/supabase/admin'
 import { AnalyzeRequest, AnalyzeResponse } from '@/types/analyze'
 
 const DEFAULT_TIMEOUT_MS = 10000
@@ -39,7 +38,6 @@ export async function POST(req: NextRequest) {
     }
 
     const data = (await response.json()) as AnalyzeResponse
-    logToSupabase(body, data).catch((err) => console.warn('Supabase logging failed', err))
     return NextResponse.json(data)
   } catch (error: any) {
     clearTimeout(timeout)
@@ -49,19 +47,4 @@ export async function POST(req: NextRequest) {
       { status: 502 }
     )
   }
-}
-
-async function logToSupabase(request: AnalyzeRequest, response: AnalyzeResponse) {
-  const supabase = createAdminClient()
-  if (!supabase) return
-  await supabase.from('analyses').insert([
-    {
-      post_text: request.post_text,
-      company_hint: request.company_hint ?? null,
-      variant_id: request.variant_id ?? null,
-      user_id: request.user_id ?? null,
-      response,
-      latency_ms: response.meta?.latency_ms ?? null,
-    },
-  ])
 }
