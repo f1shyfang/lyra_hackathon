@@ -1,51 +1,100 @@
-import Link from "next/link";
+import Link from 'next/link'
+import { AnalysisPreview } from './components/premium/AnalysisPreview'
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b1220] via-[#0c1628] to-[#0a0f1c] text-slate-100 flex items-center justify-center p-4">
-      <div className="max-w-5xl w-full">
-        <div className="text-center mb-12">
-          <h1 className="text-6xl font-bold mb-4 text-slate-50">
-            Amplify
-          </h1>
-          <p className="text-2xl opacity-80 mb-8">
-            AI-Powered LinkedIn Content Optimization
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Sentiment Analyzer Card */}
-          <Link href="/sentiment-analyzer">
-            <div className="bg-white/5 border border-white/10 rounded-2xl shadow-2xl p-8 hover:scale-105 transition-transform cursor-pointer group backdrop-blur-xl">
-              <h2 className="text-2xl font-bold text-sky-200 mb-3">
-                PR Sentiment Analyzer
-              </h2>
-              <p className="text-slate-200/80 mb-4">
-                Predict whether your LinkedIn post will generate positive or negative PR using AI-powered sentiment analysis.
-              </p>
-              <div className="flex items-center text-sky-200 font-semibold group-hover:translate-x-2 transition-transform">
-                Try it now →
-              </div>
-            </div>
-          </Link>
-
-          {/* AI Personas Card */}
-          <Link href="/examples/ai-personas">
-            <div className="bg-white/5 border border-white/10 rounded-2xl shadow-2xl p-8 hover:scale-105 transition-transform cursor-pointer group backdrop-blur-xl">
-              <h2 className="text-2xl font-bold text-sky-200 mb-3">
-                AI Personas
-              </h2>
-              <p className="text-slate-200/80 mb-4">
-                Get AI-powered persona critiques and optimize your LinkedIn content with expert feedback.
-              </p>
-              <div className="flex items-center text-sky-200 font-semibold group-hover:translate-x-2 transition-transform">
-                Explore →
-              </div>
-            </div>
-          </Link>
-        </div>
+    <div className="min-h-screen relative">
+      {/* Brighter center glow for homepage */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-500/30 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-pink-500/20 rounded-full blur-3xl" />
       </div>
+
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-20 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-semibold text-white mb-6 tracking-tight leading-tight">
+            See who your words attract
+          </h1>
+          <p className="text-xl sm:text-2xl text-slate-300 mb-12 font-light">
+            Recruiting intelligence for LinkedIn posts.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/analyze"
+              className="px-8 py-4 bg-white text-black rounded-full font-medium hover:bg-slate-100 transition-all duration-200 shadow-lg shadow-purple-500/20 hover:shadow-xl hover:shadow-purple-500/30"
+            >
+              Analyze a draft
+            </Link>
+            <Link
+              href="/about"
+              className="px-8 py-4 text-slate-300 rounded-full font-medium hover:bg-white/10 transition-all duration-200"
+            >
+              See how it works
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Interactive Preview Section */}
+      <section className="relative py-20 px-4">
+        <div className="relative">
+          <AnalysisPreview />
+        </div>
+      </section>
+
+      {/* What You Learn Section */}
+      <section className="relative py-20 px-4">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-semibold text-white mb-16 text-center">
+            What you learn
+          </h2>
+          
+          <div className="space-y-8">
+            <div className="group">
+              <p className="text-xl text-slate-300 leading-relaxed">
+                Whether engineers feel invited — or pushed away
+              </p>
+            </div>
+            
+            <div className="group">
+              <p className="text-xl text-slate-300 leading-relaxed">
+                If engagement is coming from the wrong audience
+              </p>
+            </div>
+            
+            <div className="group">
+              <p className="text-xl text-slate-300 leading-relaxed">
+                When high likes hide recruiting risk
+              </p>
+            </div>
+            
+            <div className="group">
+              <p className="text-xl text-slate-300 leading-relaxed">
+                Which phrases attract the roles you need
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="relative py-32 px-4">
+        <div className="max-w-2xl mx-auto text-center">
+          <p className="text-2xl text-slate-300 mb-8 font-light">
+            Designed for teams that care who they attract.
+          </p>
+          
+          <Link
+            href="/analyze"
+            className="inline-block px-8 py-4 bg-white text-black rounded-full font-medium hover:bg-slate-100 transition-all duration-200 shadow-lg shadow-purple-500/20 hover:shadow-xl hover:shadow-purple-500/30"
+          >
+            Try Lyra
+          </Link>
+        </div>
+      </section>
     </div>
-  );
+  )
 }
 
