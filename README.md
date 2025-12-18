@@ -177,3 +177,36 @@ seaborn
 ---
 
 **Created for Lyra Hackathon** | December 2025
+
+## How to run locally (ML API + Next.js)
+
+1. Create a Python venv and install ML API deps:
+   ```bash
+   python -m venv .venv
+   # Windows: .venv\Scripts\activate
+   source .venv/bin/activate
+   pip install -r services/ml_api/requirements.txt
+   ```
+2. Install Node deps:
+   ```bash
+   npm install
+   ```
+3. Start both FastAPI + Next.js:
+   ```bash
+   npm run dev
+   ```
+   Or run separately:
+   ```bash
+   npm run dev:ml   # FastAPI at http://localhost:8000
+   npm run dev:web  # Next.js at http://localhost:3000
+   ```
+
+Environment variables (`.env.local`) needed for the new pipeline:
+```
+ML_API_URL=http://localhost:8000
+NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+```
+
+Supabase schema for logging requests/responses: `docs/supabase.sql` (table `analyses`).

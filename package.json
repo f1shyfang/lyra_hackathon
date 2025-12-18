@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently \"npm run dev:web\" \"npm run dev:ml\"",
+    "dev:web": "next dev",
+    "dev:ml": "uvicorn services.ml_api.main:app --reload --host 0.0.0.0 --port 8000",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -28,6 +30,7 @@
     "@types/node": "^25.0.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "concurrently": "^9.2.1",
     "next": "^16.0.10",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",

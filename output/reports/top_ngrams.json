@@ -1,0 +1,251 @@
+{
+  "toxic_culture": [
+    {
+      "term": "every",
+      "weight": 0.5817509563123194
+    },
+    {
+      "term": "21",
+      "weight": 0.5070105599975836
+    },
+    {
+      "term": "in our",
+      "weight": 0.5018760685530044
+    },
+    {
+      "term": "delivery",
+      "weight": 0.49853067158057307
+    },
+    {
+      "term": "we",
+      "weight": 0.49574053580036814
+    },
+    {
+      "term": "this week",
+      "weight": 0.48110339171800315
+    },
+    {
+      "term": "here https",
+      "weight": 0.46344543616078343
+    },
+    {
+      "term": "michael",
+      "weight": 0.4628014869393557
+    },
+    {
+      "term": "call",
+      "weight": 0.4602109377206469
+    },
+    {
+      "term": "time",
+      "weight": 0.4468108556832764
+    },
+    {
+      "term": "adoption",
+      "weight": 0.4259721564688867
+    },
+    {
+      "term": "can be",
+      "weight": 0.4242639861599189
+    },
+    {
+      "term": "amazon",
+      "weight": 0.42422080951496904
+    },
+    {
+      "term": "10",
+      "weight": 0.4164679283315779
+    },
+    {
+      "term": "companies",
+      "weight": 0.41623595169909716
+    }
+  ],
+  "burnout": [
+    {
+      "term": "economic",
+      "weight": 1.5650126563932423
+    },
+    {
+      "term": "society",
+      "weight": 1.341102427550094
+    },
+    {
+      "term": "economic freedom",
+      "weight": 1.1415238955772828
+    },
+    {
+      "term": "the world",
+      "weight": 1.1367079579406463
+    },
+    {
+      "term": "freedom",
+      "weight": 1.0695286291401545
+    },
+    {
+      "term": "unsw",
+      "weight": 1.0562494120290002
+    },
+    {
+      "term": "crypto",
+      "weight": 1.03402093124011
+    },
+    {
+      "term": "sydney",
+      "weight": 1.0036585994829696
+    },
+    {
+      "term": "world",
+      "weight": 0.902733422498772
+    },
+    {
+      "term": "their",
+      "weight": 0.8642212665894843
+    },
+    {
+      "term": "university",
+      "weight": 0.7570578562641925
+    },
+    {
+      "term": "data",
+      "weight": 0.7351453008668603
+    },
+    {
+      "term": "lyra",
+      "weight": 0.7186217944519246
+    },
+    {
+      "term": "global",
+      "weight": 0.7164504392796313
+    },
+    {
+      "term": "new data",
+      "weight": 0.6785867034208903
+    }
+  ],
+  "elitism": [],
+  "credibility_overclaim": [
+    {
+      "term": "it time",
+      "weight": 0.6378628623793267
+    },
+    {
+      "term": "wonder",
+      "weight": 0.6052300007316923
+    },
+    {
+      "term": "crypto",
+      "weight": 0.5374016889430189
+    },
+    {
+      "term": "collaboration",
+      "weight": 0.511264506899456
+    },
+    {
+      "term": "finance",
+      "weight": 0.5023963999779096
+    },
+    {
+      "term": "and it",
+      "weight": 0.49861225552007615
+    },
+    {
+      "term": "now",
+      "weight": 0.46389400180627033
+    },
+    {
+      "term": "years",
+      "weight": 0.4606339304883898
+    },
+    {
+      "term": "lowest",
+      "weight": 0.45634177593613867
+    },
+    {
+      "term": "inside",
+      "weight": 0.4558115512440988
+    },
+    {
+      "term": "every",
+      "weight": 0.4425804415692316
+    },
+    {
+      "term": "time to",
+      "weight": 0.42899274024144685
+    },
+    {
+      "term": "from",
+      "weight": 0.39330775737387147
+    },
+    {
+      "term": "your",
+      "weight": 0.3887067374483226
+    },
+    {
+      "term": "categories",
+      "weight": 0.3872924253092511
+    }
+  ],
+  "culture_misalignment": [
+    {
+      "term": "no",
+      "weight": 2.217370100972381
+    },
+    {
+      "term": "deliveries",
+      "weight": 1.526284383963221
+    },
+    {
+      "term": "network",
+      "weight": 0.9992194266328341
+    },
+    {
+      "term": "fast",
+      "weight": 0.8922598560045603
+    },
+    {
+      "term": "delivery",
+      "weight": 0.8874425933458496
+    },
+    {
+      "term": "our",
+      "weight": 0.8714988898812921
+    },
+    {
+      "term": "city",
+      "weight": 0.8205957699132771
+    },
+    {
+      "term": "european",
+      "weight": 0.820042952885344
+    },
+    {
+      "term": "in belgium",
+      "weight": 0.8173008812942482
+    },
+    {
+      "term": "belgium",
+      "weight": 0.8077028464222634
+    },
+    {
+      "term": "anyone",
+      "weight": 0.793352833262321
+    },
+    {
+      "term": "moves fast",
+      "weight": 0.7888105215590756
+    },
+    {
+      "term": "borders",
+      "weight": 0.7883844626306921
+    },
+    {
+      "term": "the internet",
+      "weight": 0.788012146284521
+    },
+    {
+      "term": "number",
+      "weight": 0.7864207096093891
+    }
+  ]
+}
