@@ -22,7 +22,7 @@ export function Navigation() {
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="text-xl font-semibold text-white tracking-tight">
-            Lyra
+            Lydo
           </Link>
           <div className="flex gap-8">
             {links.map((link) => (
