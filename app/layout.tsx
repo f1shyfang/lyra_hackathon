@@ -3,7 +3,7 @@ import "./globals.css";
 import { Navigation } from "./components/Navigation";
 
 export const metadata: Metadata = {
-  title: "Lyra - Recruiting Signal Intelligence",
+  title: "Lydo - Recruiting Signal Intelligence",
   description: "See who your words attract before you publish. Predict audience composition and recruiting risk for your LinkedIn posts.",
 };
 

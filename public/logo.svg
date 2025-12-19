@@ -1,0 +1,10 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Vertical stroke (left) -->
+  <path d="M6 4V26" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+  
+  <!-- Horizontal stroke (bottom) -->
+  <path d="M6 26H28" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+  
+  <!-- Diagonal curve (signal flow - cyan accent) -->
+  <path d="M6 26Q10 22 14 16Q18 10 24 4" stroke="#45d0ff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+</svg>

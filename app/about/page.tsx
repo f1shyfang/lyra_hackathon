@@ -8,14 +8,14 @@ export default function AboutPage() {
 
       <div className="relative z-10 container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-5xl font-bold mb-6 text-slate-50">About Lyra</h1>
+          <h1 className="text-5xl font-bold mb-6 text-slate-50">About Lydo</h1>
           
           <div className="space-y-8">
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
-              <h2 className="text-2xl font-bold mb-4 text-cyan-300">What is Lyra?</h2>
+              <h2 className="text-2xl font-bold mb-4 text-cyan-300">What is Lydo?</h2>
               <p className="text-slate-300 leading-relaxed mb-4">
-                Lyra is a recruiting signal intelligence platform that analyzes LinkedIn posts before you publish them. 
-                Using machine learning models trained on real recruiting data, Lyra predicts:
+                Lydo is a recruiting signal intelligence platform that analyzes LinkedIn posts before you publish them. 
+                Using machine learning models trained on real recruiting data, Lydo predicts:
               </p>
               <ul className="list-disc list-inside space-y-2 text-slate-300 ml-4">
                 <li><strong>Audience Composition</strong> - Which professional roles your post will attract</li>

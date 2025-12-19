@@ -90,7 +90,7 @@ export default function Home() {
             href="/analyze"
             className="inline-block px-8 py-4 bg-white text-black rounded-full font-medium hover:bg-slate-100 transition-all duration-200 shadow-lg shadow-purple-500/20 hover:shadow-xl hover:shadow-purple-500/30"
           >
-            Try Lyra
+            Try Lydo
           </Link>
         </div>
       </section>
