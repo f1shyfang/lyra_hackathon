@@ -1,6 +1,6 @@
 # LinkedIn PR Sentiment Classifier
 
-A machine learning system to predict whether a LinkedIn post will result in positive or negative PR using Gemini LLM embeddings and XGBoost.
+A machine learning system to predict whether a LinkedIn post will result in positive or negative PR using Ridge, Logistic Regression and XGboost.
 
 ## 🎯 Project Overview
 
@@ -11,7 +11,7 @@ This project analyzes LinkedIn posts to classify them as generating positive or 
 
 ## 📊 Dataset
 
-- **Posts**: ~200 LinkedIn company posts (primarily from Google)
+- **Posts**: ~1200 LinkedIn company posts per company (primarily from 6 different techn companies such as Google, Netflix, Micorsoft and etc.)
 - **Comments**: ~6000 comments with engagement data
 - **Features**: Text content, engagement metrics, media type, temporal patterns
 
@@ -51,6 +51,7 @@ LinkedIn Posts → Label Generation → Feature Engineering → Model Training �
 
 ### 4. **Model Training**
    - XGBoost binary classifier
+   - Regression 
    - 80/20 train-test split
    - Feature scaling with StandardScaler
    - Class weighting for imbalanced data
