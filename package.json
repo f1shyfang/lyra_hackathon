@@ -9,7 +9,7 @@
     "dev:ml": "uvicorn api:app --reload --host 0.0.0.0 --port 8000",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "types:generate": "supabase gen types typescript --project-id YOUR_PROJECT_ID > types/supabase.ts || echo 'Install Supabase CLI and set your project ID to generate types'"
   },
   "repository": {

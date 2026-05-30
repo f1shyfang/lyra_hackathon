@@ -199,7 +199,7 @@ export default function GeminiTestPage() {
             <ul className="list-disc list-inside space-y-1 text-blue-700 dark:text-blue-300">
               <li>Select a model from the dropdown</li>
               <li>Enter your prompt in the text area</li>
-              <li>Click "Generate Response" to send the request</li>
+              <li>Click &quot;Generate Response&quot; to send the request</li>
               <li>The response will appear below</li>
             </ul>
           </div>
