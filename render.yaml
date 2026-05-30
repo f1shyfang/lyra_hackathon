@@ -12,7 +12,7 @@ services:
     name: pr-sentiment-api
     runtime: python
     region: oregon
-    plan: starter            # 'free' works too, but sleeps after inactivity
+    plan: free               # always-free instance; sleeps after ~15 min idle (≈50s cold start on next request)
     branch: main
     buildCommand: pip install --no-cache-dir -r requirements_api.txt
     # gunicorn manages the process; UvicornWorker runs the ASGI app.
