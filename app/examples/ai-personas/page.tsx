@@ -784,7 +784,7 @@ export default function AIPersonasPage() {
                       </div>
                       <div className="tagList">
                         {getAllTags().length === 0 ? (
-                          <div className="tagEmpty">No tags yet. Add tags in "Edit persona".</div>
+                          <div className="tagEmpty">No tags yet. Add tags in &quot;Edit persona&quot;.</div>
                         ) : (
                           getAllTags().map(tag => (
                             <div

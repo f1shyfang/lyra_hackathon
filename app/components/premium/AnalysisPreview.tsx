@@ -20,13 +20,13 @@ export function AnalysisPreview() {
           <div className="space-y-4 text-slate-200 leading-relaxed">
             <p>Excited to announce our team is growing!</p>
             <p className="bg-purple-500/20 px-3 py-1 rounded-lg inline-block border border-purple-500/30">
-              We're tackling complex challenges in distributed systems
+              We&apos;re tackling complex challenges in distributed systems
             </p>
             <p>Looking for engineers who love diving deep into open-source projects and optimising for performance.</p>
             <p className="bg-purple-500/20 px-3 py-1 rounded-lg inline-block border border-purple-500/30">
-              If you're passionate about building resilient systems
+              If you&apos;re passionate about building resilient systems
             </p>
-            <p>and contributing to the community, let's chat.</p>
+            <p>and contributing to the community, let&apos;s chat.</p>
           </div>
         </div>
 
