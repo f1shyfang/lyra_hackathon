@@ -3,24 +3,24 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Tables } from '@/types/supabase'
+import type { ABTest as ABTestRow, ABTestVariant, ABTestEvaluation } from '@/lib/db/schema'
 
-type ABTest = Tables<'ab_tests'> & {
-  drafts?: {
+type ABTest = ABTestRow & {
+  draft?: {
     id: string
     content: string
     status: string
   }
 }
 
-type Variant = Tables<'ab_test_variants'>
+type Variant = ABTestVariant
 
-type Evaluation = Tables<'ab_test_evaluations'> & {
-  ab_test_variants?: {
+type Evaluation = ABTestEvaluation & {
+  variant?: {
     id: string
     name: string
   }
-  ai_personas?: {
+  persona?: {
     id: string
     name: string | null
   }
@@ -107,7 +107,7 @@ export default function ABTestDetailPage() {
 
   // Calculate variant statistics
   const variantStats = variants.map((variant) => {
-    const variantEvals = evaluations.filter((e) => e.variant_id === variant.id)
+    const variantEvals = evaluations.filter((e) => e.variantId === variant.id)
     const avgScore =
       variantEvals.length > 0
         ? variantEvals.reduce((sum, e) => sum + e.score, 0) / variantEvals.length
@@ -233,7 +233,7 @@ export default function ABTestDetailPage() {
                         className="text-sm p-2 bg-gray-50 dark:bg-gray-700 rounded"
                       >
                         <span className="font-medium text-gray-900 dark:text-gray-100">
-                          {eval_.ai_personas?.name || 'Unknown'}:
+                          {eval_.persona?.name || 'Unknown'}:
                         </span>{' '}
                         <span className="text-gray-700 dark:text-gray-300">
                           {eval_.score}/100
@@ -261,11 +261,11 @@ export default function ABTestDetailPage() {
                 >
                   <div>
                     <span className="font-medium text-gray-900 dark:text-gray-100">
-                      {eval_.ai_personas?.name || 'Unknown Persona'}
+                      {eval_.persona?.name || 'Unknown Persona'}
                     </span>
                     {' → '}
                     <span className="text-gray-700 dark:text-gray-300">
-                      {eval_.ab_test_variants?.name || 'Unknown Variant'}
+                      {eval_.variant?.name || 'Unknown Variant'}
                     </span>
                   </div>
                   <span className="text-blue-600 dark:text-blue-400 font-medium">

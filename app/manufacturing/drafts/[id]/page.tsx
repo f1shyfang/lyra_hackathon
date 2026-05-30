@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Tables } from '@/types/supabase'
+import type { Draft, CouncilFeedback as CouncilFeedbackRow } from '@/lib/db/schema'
 
-type Draft = Tables<'drafts'>
-type CouncilFeedback = Tables<'council_feedback'> & {
-  ai_personas?: {
+type CouncilFeedback = CouncilFeedbackRow & {
+  persona?: {
     id: string
     name: string | null
-    system_prompt: string | null
+    systemPrompt: string | null
   }
 }
 
@@ -223,11 +222,11 @@ export default function DraftDetailPage() {
           )}
           
           {/* Images */}
-          {draft.image_urls && (draft.image_urls as string[]).length > 0 && (
+          {draft.imageUrls && draft.imageUrls.length > 0 && (
             <div className="mt-4">
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Images ({(draft.image_urls as string[]).length})
+                  Images ({draft.imageUrls.length})
                 </h3>
                 {draft.status === 'pending' && (
                   <button
@@ -239,7 +238,7 @@ export default function DraftDetailPage() {
                 )}
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {(draft.image_urls as string[])
+                {draft.imageUrls
                   .filter(url => !deletingImages.includes(url))
                   .map((url, index) => (
                     <div key={index} className="relative group">
@@ -334,7 +333,7 @@ export default function DraftDetailPage() {
         </div>
 
         {/* Quality Scores */}
-        {(draft.avg_excitement_score !== null || draft.avg_cringe_score !== null) && (
+        {(draft.avgExcitementScore !== null || draft.avgCringeScore !== null) && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
               Quality Scores
@@ -343,19 +342,19 @@ export default function DraftDetailPage() {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Excitement Score</p>
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {draft.avg_excitement_score}/100
+                  {draft.avgExcitementScore}/100
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Cringe Score</p>
                 <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                  {draft.avg_cringe_score}/100
+                  {draft.avgCringeScore}/100
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Quality Score</p>
                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {draft.quality_score}/100
+                  {draft.qualityScore}/100
                 </p>
               </div>
             </div>
@@ -376,25 +375,25 @@ export default function DraftDetailPage() {
                 >
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                      {fb.ai_personas?.name || 'Unknown Persona'}
+                      {fb.persona?.name || 'Unknown Persona'}
                     </h3>
                     <div className="flex gap-2 text-sm">
                       <span className="text-green-600 dark:text-green-400">
-                        Excitement: {fb.excitement_score}/100
+                        Excitement: {fb.excitementScore}/100
                       </span>
                       <span className="text-red-600 dark:text-red-400">
-                        Cringe: {fb.cringe_score}/100
+                        Cringe: {fb.cringeScore}/100
                       </span>
                     </div>
                   </div>
                   <p className="text-gray-700 dark:text-gray-300 mb-2">{fb.critique}</p>
-                  {fb.specific_fix && (
+                  {fb.specificFix && (
                     <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
                       <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
                         Suggested Fix:
                       </p>
                       <p className="text-sm text-blue-800 dark:text-blue-300">
-                        {fb.specific_fix}
+                        {fb.specificFix}
                       </p>
                     </div>
                   )}
