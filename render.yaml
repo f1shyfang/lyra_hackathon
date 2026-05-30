@@ -1,0 +1,47 @@
+# Render Blueprint for the LinkedIn PR Sentiment Classifier API
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Deploy: push this repo to GitHub, then in the Render dashboard choose
+# "New +" -> "Blueprint" and point it at the repo. Render reads this file.
+#
+# The trained model artifacts in output/ are committed to the repo, so no
+# external object storage is required at deploy time.
+
+services:
+  - type: web
+    name: pr-sentiment-api
+    runtime: python
+    region: oregon
+    plan: starter            # 'free' works too, but sleeps after inactivity
+    branch: main
+    buildCommand: pip install --no-cache-dir -r requirements_api.txt
+    # gunicorn manages the process; UvicornWorker runs the ASGI app.
+    # --timeout 120 leaves headroom for the synchronous Gemini embedding call.
+    startCommand: >-
+      gunicorn api:app
+      --worker-class uvicorn.workers.UvicornWorker
+      --bind 0.0.0.0:$PORT
+      --workers ${WEB_CONCURRENCY:-1}
+      --timeout 120
+      --access-logfile -
+      --error-logfile -
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Required — set the value in the Render dashboard (sync: false keeps the
+      # secret out of this file and out of git).
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: MODEL_DIR
+        value: output
+      # Lock to a single worker: the model + ML libs are memory-heavy and one
+      # worker fits comfortably on small instances. Raise once you size memory.
+      - key: WEB_CONCURRENCY
+        value: "1"
+      # CORS: replace "*" with your frontend origin(s), comma-separated, in prod.
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: PYTHON_VERSION
+        value: "3.12.3"
