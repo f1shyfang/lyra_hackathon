@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -37,13 +38,22 @@ def insert_run(
     variant_text: Optional[str] = None,
 ) -> None:
     conn = CONN
+    # created_at_iso is NOT NULL. analyze() responses carry meta.timestamp_iso,
+    # but compare() (and any future mode) may not — fall back to the current UTC
+    # time so persistence never depends on the response shape.
+    meta = response.get("meta", {})
+    created_at_iso = (
+        meta.get("timestamp_iso")
+        or meta.get("timestamp")
+        or datetime.now(timezone.utc).isoformat()
+    )
     conn.execute(
         """
         INSERT INTO runs (created_at_iso, mode, baseline_text, variant_text, response_json)
         VALUES (?, ?, ?, ?, ?)
         """,
         (
-            response.get("meta", {}).get("timestamp_iso") or response.get("meta", {}).get("timestamp"),
+            created_at_iso,
             mode,
             baseline_text,
             variant_text,
