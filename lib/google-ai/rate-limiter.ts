@@ -7,7 +7,7 @@ interface RateLimitConfig {
   maxRequests: number // Maximum requests allowed
   windowMs: number // Time window in milliseconds
 }
-
+//simple record of the timestamp of the request
 interface RequestRecord {
   timestamp: number
 }

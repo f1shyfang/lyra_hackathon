@@ -1,0 +1,39 @@
+{
+  "role": {
+    "train": {
+      "amazon": 39,
+      "coinbase": 38,
+      "google": 41,
+      "lyra": 2,
+      "tesla": 8
+    },
+    "test": {
+      "meta": 47
+    }
+  },
+  "narrative": {
+    "train": {
+      "amazon": 43,
+      "coinbase": 84,
+      "google": 43,
+      "lyra": 10,
+      "tesla": 8
+    },
+    "test": {
+      "meta": 49
+    }
+  },
+  "risk": {
+    "train": {
+      "amazon": 100,
+      "coinbase": 100,
+      "google": 100,
+      "lyra": 50,
+      "microsoft": 50,
+      "tesla": 8
+    },
+    "test": {
+      "meta": 50
+    }
+  }
+}

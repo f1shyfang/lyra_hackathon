@@ -36,3 +36,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Database
+*.sqlite
+
+# Backup files
+*.zip
+

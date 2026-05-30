@@ -1,0 +1,79 @@
+{
+  "role": {
+    "test": {
+      "r2": {
+        "Founder/Executive": -0.9474124690052115,
+        "Recruiter/HR": -1.100522625281839,
+        "Software Engineer": -0.02850273655033031,
+        "ML/AI/Data": -0.9830005748446857,
+        "DevOps/SRE/Cloud": -0.37920061724960363,
+        "Security": -6.498632636809418,
+        "Engineering Manager/Tech Lead": -0.17038652398527776,
+        "Product Manager": -5.490935895615798,
+        "Designer": -6.25126156938251,
+        "Sales/BD": -0.7179472092846608,
+        "Marketing/Growth": -0.1820811070741266,
+        "Ops": -2.0246653443809217,
+        "Student/Academic": -0.05869031454553131,
+        "Other": -2.1176045529467036,
+        "macro": -1.925060298354044
+      },
+      "mae": {
+        "Founder/Executive": 0.08813321763034399,
+        "Recruiter/HR": 0.045765589006587566,
+        "Software Engineer": 0.042274796917206606,
+        "ML/AI/Data": 0.08987465545023746,
+        "DevOps/SRE/Cloud": 0.03432316844965123,
+        "Security": 0.05926380358161929,
+        "Engineering Manager/Tech Lead": 0.05039356505483104,
+        "Product Manager": 0.0527980071992997,
+        "Designer": 0.05385268034230078,
+        "Sales/BD": 0.04637778273144853,
+        "Marketing/Growth": 0.03859720129460896,
+        "Ops": 0.048215566735491405,
+        "Student/Academic": 0.03946666561267863,
+        "Other": 0.1510975862283076,
+        "macro": 0.060031020445329486
+      }
+    },
+    "cv": {
+      "mae_macro_cv": 0.05876516688211229
+    },
+    "plots": {
+      "role_mean_distribution": "output\\reports\\plots\\role_mean_distribution.png",
+      "role_scatter_top6": "output\\reports\\plots\\role_scatter_top6.png"
+    }
+  },
+  "narrative": {
+    "test": {
+      "f1_micro": 0.0,
+      "f1_macro": 0.0,
+      "pr_auc": {
+        "toxic_culture": 0.4620846907587775,
+        "burnout": 0.031046461137646544,
+        "elitism": 0.0,
+        "credibility_overclaim": 0.5295555252289086,
+        "culture_misalignment": 0.05846135571745328
+      }
+    },
+    "cv": {
+      "f1_macro_cv": 0.04280112044817927
+    },
+    "plots": {
+      "narrative_pr_curves": "output\\reports\\plots\\narrative_pr_curves.png"
+    }
+  },
+  "risk": {
+    "test": {
+      "accuracy": 0.2,
+      "f1_macro": 0.1111111111111111,
+      "f1_weighted": 0.06666666666666667
+    },
+    "cv": {
+      "f1_macro_cv": 0.26014125843098346
+    },
+    "plots": {
+      "risk_confusion_matrix": "output\\reports\\plots\\risk_confusion_matrix.png"
+    }
+  }
+}

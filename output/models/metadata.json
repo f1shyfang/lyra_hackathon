@@ -1,0 +1,41 @@
+{
+  "role_buckets": [
+    "Founder/Executive",
+    "Recruiter/HR",
+    "Software Engineer",
+    "ML/AI/Data",
+    "DevOps/SRE/Cloud",
+    "Security",
+    "Engineering Manager/Tech Lead",
+    "Product Manager",
+    "Designer",
+    "Sales/BD",
+    "Marketing/Growth",
+    "Ops",
+    "Student/Academic",
+    "Other"
+  ],
+  "narrative_labels": [
+    "toxic_culture",
+    "burnout",
+    "elitism",
+    "credibility_overclaim",
+    "culture_misalignment"
+  ],
+  "narrative_threshold": 0.5,
+  "narrative_share_threshold": 0.1,
+  "holdout_company": "meta",
+  "min_comments": {
+    "role": 15,
+    "narrative": 5
+  },
+  "tfidf_params": {
+    "ngram_range": [
+      1,
+      2
+    ],
+    "min_df": 2,
+    "max_df": 0.95,
+    "max_features": 30000
+  }
+}
