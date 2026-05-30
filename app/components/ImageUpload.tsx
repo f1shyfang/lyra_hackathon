@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useRef } from 'react'
+import Image from 'next/image'
 
 export interface UploadedImage {
   id: string
@@ -117,10 +118,12 @@ export function ImageUpload({
               key={img.id}
               className="relative group w-20 h-20 rounded-lg overflow-hidden border border-white/10"
             >
-              <img
+              <Image
                 src={img.preview}
                 alt="Upload preview"
-                className="w-full h-full object-cover"
+                fill
+                unoptimized
+                className="object-cover"
               />
               <button
                 type="button"

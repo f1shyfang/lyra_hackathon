@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import type { ABTest as ABTestRow, ABTestVariant, ABTestEvaluation } from '@/lib/db/schema'
@@ -37,11 +37,7 @@ export default function ABTestDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
 
-  useEffect(() => {
-    fetchABTest()
-  }, [abTestId])
-
-  const fetchABTest = async () => {
+  const fetchABTest = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -60,7 +56,11 @@ export default function ABTestDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [abTestId])
+
+  useEffect(() => {
+    fetchABTest()
+  }, [fetchABTest])
 
   const handleRunTest = async () => {
     try {

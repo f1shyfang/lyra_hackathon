@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import type { AiPersona } from '@/lib/db/schema'
 
@@ -105,10 +105,6 @@ export default function AIPersonasPage() {
   }, [])
 
   useEffect(() => {
-    applyFilter()
-  }, [personas, searchQuery, selectedTags])
-
-  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (filterWrapRef.current && !filterWrapRef.current.contains(event.target as Node)) {
         setFilterMenuOpen(false)
@@ -136,7 +132,7 @@ export default function AIPersonasPage() {
     }
   }
 
-  const applyFilter = () => {
+  const applyFilter = useCallback(() => {
     let base = personas
 
     if (searchQuery.trim()) {
@@ -160,7 +156,11 @@ export default function AIPersonasPage() {
     }
 
     setFiltered(base)
-  }
+  }, [personas, searchQuery, selectedTags])
+
+  useEffect(() => {
+    applyFilter()
+  }, [applyFilter])
 
   const getAllTags = (): string[] => {
     const set = new Set<string>()

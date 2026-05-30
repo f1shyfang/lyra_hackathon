@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import type { AiPersona } from '@/lib/db/schema'
 
@@ -441,7 +442,7 @@ export default function SimulationPage() {
                     <div className="thumbs">
                       {imagePreviews.map((url, i) => (
                         <div key={i} className="thumb">
-                          <img alt="" src={url} />
+                          <Image alt="" src={url} fill unoptimized />
                           <div className="x" onClick={() => handleRemoveImage(i)} title="Remove">
                             ×
                           </div>

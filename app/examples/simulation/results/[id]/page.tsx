@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
 import type { Draft, CouncilFeedback as CouncilFeedbackRow } from '@/lib/db/schema'
 
@@ -22,11 +23,7 @@ export default function SimulationResultsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchData()
-  }, [draftId])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -44,7 +41,11 @@ export default function SimulationResultsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [draftId])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   if (loading) {
     return (
@@ -360,10 +361,13 @@ export default function SimulationResultsPage() {
                   {draft.imageUrls && draft.imageUrls.length > 0 && (
                     <div className="images">
                       {draft.imageUrls.map((url, index) => (
-                        <img
+                        <Image
                           key={index}
                           src={url}
                           alt={`Content image ${index + 1}`}
+                          width={120}
+                          height={120}
+                          unoptimized
                           className="image"
                         />
                       ))}
