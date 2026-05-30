@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { abTests } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
+import { enforceRateLimit } from '@/lib/ratelimit'
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,6 +30,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const limited = enforceRateLimit(request)
+  if (limited) return limited
+
   try {
     const { draft_id, name, algorithm = 'epsilon_greedy', epsilon = 0.1 } = await request.json()
 

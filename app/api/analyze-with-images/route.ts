@@ -13,8 +13,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { analyzeWithImages } from '@/lib/image-analysis'
 import { AnalyzeWithImagesRequest } from '@/types/image-analysis'
+import { enforceRateLimit } from '@/lib/ratelimit'
 
 export async function POST(request: NextRequest) {
+  const limited = enforceRateLimit(request)
+  if (limited) return limited
+
   try {
     const body = await request.json()
 

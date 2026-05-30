@@ -24,3 +24,7 @@ joblib==1.3.2
 # Production server (Render)
 gunicorn==21.2.0
 python-multipart==0.0.6
+
+# Rate limiting (per-client IP). Built on starlette + the `limits` library;
+# compatible with the pinned fastapi==0.109.0 / starlette 0.35.x above.
+slowapi==0.1.9

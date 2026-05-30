@@ -1,9 +1,21 @@
-import { GoogleGenAI } from '@google/genai'
+/**
+ * Persona AI client — now backed by the Vercel AI SDK (provider-swappable).
+ *
+ * Structured outputs are produced with `generateObject` + zod schemas, which
+ * replaces the previous brittle regex JSON extraction. The model is resolved
+ * via `getModel()` so the provider can be swapped with one env var (`AI_MODEL`).
+ *
+ * The exported function signatures and return types are unchanged so existing
+ * consumers (council-processor, ab-test-engine) keep working untouched.
+ *
+ * Note: a default `model` argument is still accepted for backward compatibility,
+ * but the resolved model now comes from `getModel(model)` — passing a Gemini
+ * model id like "gemini-2.0-flash-exp" still works (it is normalized below).
+ */
+import { generateObject } from 'ai'
+import { z } from 'zod'
+import { getModel } from '@/lib/ai/provider'
 import { withRateLimit } from './rate-limiter'
-
-// Initialize the Google AI client
-// API key is read from GEMINI_API_KEY environment variable
-const ai = new GoogleGenAI({})
 
 export interface CritiqueResponse {
   cringe_score: number
@@ -23,53 +35,60 @@ export interface MultimodalContent {
   imageUrls?: string[]
 }
 
-/**
- * Fetch image from URL and convert to base64
- */
-async function fetchImageAsBase64(url: string): Promise<{ data: string; mimeType: string }> {
-  try {
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.statusText}`)
-    }
+// Default kept for signature compatibility. When a bare Gemini model id is
+// passed we normalize it to the Gateway "google/<model>" form so getModel()
+// can route it correctly.
+const DEFAULT_MODEL = 'gemini-2.0-flash-exp'
 
-    const arrayBuffer = await response.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-    const base64 = buffer.toString('base64')
-
-    // Determine MIME type from response or URL
-    const contentType = response.headers.get('content-type') || 'image/jpeg'
-    const mimeType = contentType.split(';')[0].trim()
-
-    return { data: base64, mimeType }
-  } catch (error) {
-    throw new Error(`Error processing image ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`)
-  }
+function normalizeModel(model: string): string {
+  // Already provider-prefixed (e.g. "google/...", "openai/...") — leave as-is.
+  if (model.includes('/')) return model
+  // Bare Gemini id from legacy callers — assume Google.
+  return `google/${model}`
 }
 
+// Zod schemas drive structured generation (no more manual JSON parsing).
+const critiqueSchema = z.object({
+  cringe_score: z
+    .number()
+    .describe('0-100, where 0 is not cringe at all and 100 is extremely cringe'),
+  excitement_score: z
+    .number()
+    .describe('0-100, where 0 is boring and 100 is extremely exciting'),
+  critique: z.string().describe('Detailed critique of the post'),
+  specific_fix: z
+    .string()
+    .nullable()
+    .describe('A specific suggestion to improve the post, or null if none needed'),
+})
+
+const variantEvaluationSchema = z.object({
+  score: z.number().describe('0-100, where 0 is terrible and 100 is excellent'),
+  preference_rank: z
+    .number()
+    .optional()
+    .describe('Optional preference ranking among variants'),
+  feedback: z.string().optional().describe('Optional brief feedback about this variant'),
+})
+
+const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)))
+
 /**
- * Build multimodal content parts for Gemini API
+ * Build AI SDK message content parts (text + image) for a multimodal prompt.
+ * Image URLs are passed through directly as AI SDK image parts — the SDK/model
+ * handles fetching, so we no longer base64-inline them manually.
  */
-async function buildMultimodalParts(content: MultimodalContent): Promise<Array<{ text?: string; inlineData?: { data: string; mimeType: string } }>> {
-  const parts: Array<{ text?: string; inlineData?: { data: string; mimeType: string } }> = []
+function buildContentParts(
+  promptText: string,
+  imageUrls?: string[]
+): Array<{ type: 'text'; text: string } | { type: 'image'; image: URL }> {
+  const parts: Array<
+    { type: 'text'; text: string } | { type: 'image'; image: URL }
+  > = [{ type: 'text', text: promptText }]
 
-  // Add text part if present
-  if (content.text) {
-    parts.push({ text: content.text })
-  }
-
-  // Add image parts if present
-  if (content.imageUrls && content.imageUrls.length > 0) {
-    const imagePromises = content.imageUrls.map(url => fetchImageAsBase64(url))
-    const images = await Promise.all(imagePromises)
-    
-    for (const image of images) {
-      parts.push({
-        inlineData: {
-          data: image.data,
-          mimeType: image.mimeType,
-        },
-      })
+  if (imageUrls && imageUrls.length > 0) {
+    for (const url of imageUrls) {
+      parts.push({ type: 'image', image: new URL(url) })
     }
   }
 
@@ -77,21 +96,19 @@ async function buildMultimodalParts(content: MultimodalContent): Promise<Array<{
 }
 
 /**
- * Get critique from a persona for a LinkedIn post
- * Supports both text and images (multimodal)
+ * Get critique from a persona for a LinkedIn post.
+ * Supports both text and images (multimodal).
  */
 export async function getPersonaCritique(
   systemPrompt: string,
   content: string | MultimodalContent,
-  model: string = 'gemini-2.0-flash-exp'
+  model: string = DEFAULT_MODEL
 ): Promise<CritiqueResponse> {
-  // Handle backward compatibility: string content
-  const multimodalContent: MultimodalContent = typeof content === 'string'
-    ? { text: content }
-    : content
+  const multimodalContent: MultimodalContent =
+    typeof content === 'string' ? { text: content } : content
 
-  // Build prompt text
-  const contentDescription = multimodalContent.imageUrls && multimodalContent.imageUrls.length > 0
+  const hasImages = Boolean(multimodalContent.imageUrls?.length)
+  const contentDescription = hasImages
     ? 'this LinkedIn post (including any images)'
     : 'this LinkedIn post'
 
@@ -99,83 +116,58 @@ export async function getPersonaCritique(
 
 Critique ${contentDescription}${multimodalContent.text ? `: "${multimodalContent.text}"` : ''}
 
-${multimodalContent.imageUrls && multimodalContent.imageUrls.length > 0
-    ? `The post includes ${multimodalContent.imageUrls.length} image(s). Evaluate both the text and visual content, considering how they work together.`
-    : ''}
-
-Provide your critique in the following JSON format:
-{
-  "cringe_score": <number 0-100, where 0 is not cringe at all and 100 is extremely cringe>,
-  "excitement_score": <number 0-100, where 0 is boring and 100 is extremely exciting>,
-  "critique": "<your detailed critique of the post>",
-  "specific_fix": "<a specific suggestion to improve the post, or null if no fix needed>"
+${
+  hasImages
+    ? `The post includes ${multimodalContent.imageUrls!.length} image(s). Evaluate both the text and visual content, considering how they work together.`
+    : ''
 }
 
-Respond ONLY with valid JSON, no additional text.`
+Provide a cringe_score (0-100), an excitement_score (0-100), a detailed critique, and a specific_fix suggestion (or null if no fix is needed).`
 
   try {
-    // Build multimodal parts
-    const parts = await buildMultimodalParts({
-      text: promptText,
-      imageUrls: multimodalContent.imageUrls,
-    })
-
-    // Make API call with rate limiting
-    const response = await withRateLimit(
-      () => ai.models.generateContent({
-        model,
-        contents: [
-          {
-            role: 'user',
-            parts,
-          },
-        ],
-      }),
+    const { object } = await withRateLimit(
+      () =>
+        generateObject({
+          model: getModel(normalizeModel(model)),
+          schema: critiqueSchema,
+          messages: [
+            {
+              role: 'user',
+              content: buildContentParts(promptText, multimodalContent.imageUrls),
+            },
+          ],
+        }),
       'getPersonaCritique'
     )
 
-    if (!response.text) {
-      throw new Error('No response text from AI model')
+    return {
+      cringe_score: clamp(object.cringe_score),
+      excitement_score: clamp(object.excitement_score),
+      critique: object.critique,
+      specific_fix: object.specific_fix,
     }
-
-    const text = response.text.trim()
-    
-    // Try to extract JSON from the response
-    let jsonText = text
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      jsonText = jsonMatch[0]
-    }
-
-    const result = JSON.parse(jsonText) as CritiqueResponse
-
-    // Validate and clamp scores
-    result.cringe_score = Math.max(0, Math.min(100, Math.round(result.cringe_score)))
-    result.excitement_score = Math.max(0, Math.min(100, Math.round(result.excitement_score)))
-
-    return result
   } catch (error) {
     console.error('Error getting persona critique:', error)
-    throw new Error(`Failed to get critique: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    throw new Error(
+      `Failed to get critique: ${error instanceof Error ? error.message : 'Unknown error'}`
+    )
   }
 }
 
 /**
- * Get variant evaluation from a persona for A/B testing
- * Supports both text and images (multimodal)
+ * Get variant evaluation from a persona for A/B testing.
+ * Supports both text and images (multimodal).
  */
 export async function getPersonaVariantEvaluation(
   systemPrompt: string,
   variantContent: string | MultimodalContent,
-  model: string = 'gemini-2.0-flash-exp'
+  model: string = DEFAULT_MODEL
 ): Promise<VariantEvaluationResponse> {
-  // Handle backward compatibility: string content
-  const multimodalContent: MultimodalContent = typeof variantContent === 'string'
-    ? { text: variantContent }
-    : variantContent
+  const multimodalContent: MultimodalContent =
+    typeof variantContent === 'string' ? { text: variantContent } : variantContent
 
-  // Build prompt text
-  const contentDescription = multimodalContent.imageUrls && multimodalContent.imageUrls.length > 0
+  const hasImages = Boolean(multimodalContent.imageUrls?.length)
+  const contentDescription = hasImages
     ? 'this LinkedIn post variant (including any images)'
     : 'this LinkedIn post variant'
 
@@ -183,63 +175,39 @@ export async function getPersonaVariantEvaluation(
 
 Rate ${contentDescription} on a scale of 0-100, where 0 is terrible and 100 is excellent${multimodalContent.text ? `: "${multimodalContent.text}"` : ''}
 
-${multimodalContent.imageUrls && multimodalContent.imageUrls.length > 0
-    ? `The variant includes ${multimodalContent.imageUrls.length} image(s). Evaluate both the text and visual content.`
-    : ''}
-
-Provide your evaluation in the following JSON format:
-{
-  "score": <number 0-100>,
-  "feedback": "<optional brief feedback about this variant>"
+${
+  hasImages
+    ? `The variant includes ${multimodalContent.imageUrls!.length} image(s). Evaluate both the text and visual content.`
+    : ''
 }
 
-Respond ONLY with valid JSON, no additional text.`
+Provide a score (0-100) and optional brief feedback about this variant.`
 
   try {
-    // Build multimodal parts
-    const parts = await buildMultimodalParts({
-      text: promptText,
-      imageUrls: multimodalContent.imageUrls,
-    })
-
-    // Make API call with rate limiting
-    const response = await withRateLimit(
-      () => ai.models.generateContent({
-        model,
-        contents: [
-          {
-            role: 'user',
-            parts,
-          },
-        ],
-      }),
+    const { object } = await withRateLimit(
+      () =>
+        generateObject({
+          model: getModel(normalizeModel(model)),
+          schema: variantEvaluationSchema,
+          messages: [
+            {
+              role: 'user',
+              content: buildContentParts(promptText, multimodalContent.imageUrls),
+            },
+          ],
+        }),
       'getPersonaVariantEvaluation'
     )
 
-    if (!response.text) {
-      throw new Error('No response text from AI model')
+    return {
+      score: clamp(object.score),
+      preference_rank: object.preference_rank,
+      feedback: object.feedback,
     }
-
-    const text = response.text.trim()
-    
-    // Try to extract JSON from the response
-    let jsonText = text
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      jsonText = jsonMatch[0]
-    }
-
-    const result = JSON.parse(jsonText) as VariantEvaluationResponse
-
-    // Validate and clamp score
-    result.score = Math.max(0, Math.min(100, Math.round(result.score)))
-
-    return result
   } catch (error) {
     console.error('Error getting variant evaluation:', error)
-    throw new Error(`Failed to get variant evaluation: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    throw new Error(
+      `Failed to get variant evaluation: ${error instanceof Error ? error.message : 'Unknown error'}`
+    )
   }
 }
-
-export default ai
-

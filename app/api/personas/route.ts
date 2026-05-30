@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { aiPersonas } from '@/lib/db/schema'
 import { asc } from 'drizzle-orm'
+import { enforceRateLimit } from '@/lib/ratelimit'
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,6 +22,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const limited = enforceRateLimit(request)
+  if (limited) return limited
+
   try {
     const body = await request.json()
     const { name, systemPrompt, active } = body

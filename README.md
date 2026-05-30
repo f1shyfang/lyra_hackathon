@@ -211,3 +211,55 @@ SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
 ```
 
 Supabase schema for logging requests/responses: `docs/supabase.sql` (table `analyses`).
+
+## AI provider abstraction (Vercel AI SDK)
+
+The Next.js AI layer uses the **Vercel AI SDK** (`ai` + `@ai-sdk/google` + `zod`),
+so the model provider is swappable. `lib/ai/provider.ts` exposes `getModel()`,
+which resolves a model from the `AI_MODEL` env var (default
+`google/gemini-2.0-flash`).
+
+How a model is resolved:
+- If `AI_GATEWAY_API_KEY` is set (or, on Vercel, OIDC enables the Gateway), the
+  `provider/model` string is routed through the **Vercel AI Gateway**, which adds
+  failover and cost tracking.
+- Otherwise it falls back to the `@ai-sdk/google` provider using a direct key.
+  The key is read from `GOOGLE_GENERATIVE_AI_API_KEY` (preferred), with
+  `GEMINI_API_KEY` as a fallback.
+
+**Switching providers** is a one-line change: set `AI_MODEL` (e.g.
+`openai/gpt-4o-mini`) and supply the relevant provider key or use the Gateway.
+
+```
+AI_MODEL=google/gemini-2.0-flash      # default
+AI_GATEWAY_API_KEY=...                # optional: route via Vercel AI Gateway
+GOOGLE_GENERATIVE_AI_API_KEY=...       # direct Google key (GEMINI_API_KEY is a fallback)
+```
+
+## Rate limiting
+
+Two independent limiters protect the public surface:
+
+**Next.js inbound limiter** (`lib/ratelimit.ts`) — an in-memory, per-client-IP
+limiter applied to all public POST routes: `/api/gemini`, `/api/predict`,
+`/api/analyze`, `/api/analyze-with-images`, `/api/ab-tests`, `/api/personas`,
+`/api/drafts`. Over-limit requests get a `429` with a `Retry-After` header.
+Configure with:
+```
+RATE_LIMIT_MAX=30           # max requests per client per window
+RATE_LIMIT_WINDOW_MS=60000  # window length (ms)
+```
+> Caveat: the in-memory store does **not** span serverless instances. For
+> production scale, back it with Upstash (shared Redis).
+
+There is also a separate **outbound** throttle on calls to the AI provider,
+configured with `GEMINI_RATE_LIMIT_MAX_REQUESTS` (default `15`) and
+`GEMINI_RATE_LIMIT_WINDOW_MS` (default `60000`).
+
+**FastAPI `/predict` limiter** (`api.py`) — a `slowapi` per-IP limit on
+`POST /predict`, returning `429` when exceeded. Configure with
+`RATE_LIMIT_PREDICT` (default `30/minute`).
+> Caveat: the default store is in-memory **per gunicorn worker**, so with N
+> workers the effective global limit is ~N× the configured value. Set
+> `RATELIMIT_STORAGE_URI` (e.g. `redis://host:6379/0`) for a consistent global
+> limit. See `RENDER_DEPLOY.md` for deployment details.

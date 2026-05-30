@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:web\" \"npm run dev:ml\"",
     "dev:web": "next dev",
-    "dev:ml": "uvicorn services.ml_api.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:ml": "uvicorn api:app --reload --host 0.0.0.0 --port 8000",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/f1shyfang/lyra_hackathon#readme",
   "dependencies": {
+    "@ai-sdk/google": "^3.0.80",
     "@google/genai": "^1.33.0",
     "@neondatabase/serverless": "^1.1.0",
     "@supabase/ssr": "^0.8.0",
@@ -31,12 +32,14 @@
     "@types/node": "^25.0.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "ai": "^6.0.193",
     "concurrently": "^9.2.1",
     "drizzle-orm": "^0.45.2",
     "next": "^16.0.10",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.22",
