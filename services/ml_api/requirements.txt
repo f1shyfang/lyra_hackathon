@@ -1,6 +1,10 @@
 fastapi
 uvicorn[standard]
-scikit-learn
+# Production server used by render.yaml (gunicorn + UvicornWorker).
+gunicorn
+# Pinned to the version the model artifacts in output/models were pickled with,
+# to avoid scikit-learn's InconsistentVersionWarning / invalid-results risk.
+scikit-learn==1.7.2
 joblib
 numpy
 scipy
