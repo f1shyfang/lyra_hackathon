@@ -8,9 +8,13 @@
  * The exported function signatures and return types are unchanged so existing
  * consumers (council-processor, ab-test-engine) keep working untouched.
  *
- * Note: a default `model` argument is still accepted for backward compatibility,
- * but the resolved model now comes from `getModel(model)` — passing a Gemini
- * model id like "gemini-2.0-flash-exp" still works (it is normalized below).
+ * The optional `model` argument overrides the provider/model for a single call;
+ * when omitted, the resolved model comes from `getModel()` (i.e. the `AI_MODEL`
+ * env var, default openai/gpt-4o-mini). Pass a Gateway-style "provider/model"
+ * string to override (e.g. "openai/gpt-4o").
+ *
+ * NOTE: this directory is named `google-ai/` for historical reasons; it is now
+ * provider-agnostic (OpenAI by default).
  */
 import { generateObject } from 'ai'
 import { z } from 'zod'
@@ -33,18 +37,6 @@ export interface VariantEvaluationResponse {
 export interface MultimodalContent {
   text?: string
   imageUrls?: string[]
-}
-
-// Default kept for signature compatibility. When a bare Gemini model id is
-// passed we normalize it to the Gateway "google/<model>" form so getModel()
-// can route it correctly.
-const DEFAULT_MODEL = 'gemini-2.0-flash-exp'
-
-function normalizeModel(model: string): string {
-  // Already provider-prefixed (e.g. "google/...", "openai/...") — leave as-is.
-  if (model.includes('/')) return model
-  // Bare Gemini id from legacy callers — assume Google.
-  return `google/${model}`
 }
 
 // Zod schemas drive structured generation (no more manual JSON parsing).
@@ -102,7 +94,7 @@ function buildContentParts(
 export async function getPersonaCritique(
   systemPrompt: string,
   content: string | MultimodalContent,
-  model: string = DEFAULT_MODEL
+  model?: string
 ): Promise<CritiqueResponse> {
   const multimodalContent: MultimodalContent =
     typeof content === 'string' ? { text: content } : content
@@ -128,7 +120,7 @@ Provide a cringe_score (0-100), an excitement_score (0-100), a detailed critique
     const { object } = await withRateLimit(
       () =>
         generateObject({
-          model: getModel(normalizeModel(model)),
+          model: getModel(model),
           schema: critiqueSchema,
           messages: [
             {
@@ -161,7 +153,7 @@ Provide a cringe_score (0-100), an excitement_score (0-100), a detailed critique
 export async function getPersonaVariantEvaluation(
   systemPrompt: string,
   variantContent: string | MultimodalContent,
-  model: string = DEFAULT_MODEL
+  model?: string
 ): Promise<VariantEvaluationResponse> {
   const multimodalContent: MultimodalContent =
     typeof variantContent === 'string' ? { text: variantContent } : variantContent
@@ -187,7 +179,7 @@ Provide a score (0-100) and optional brief feedback about this variant.`
     const { object } = await withRateLimit(
       () =>
         generateObject({
-          model: getModel(normalizeModel(model)),
+          model: getModel(model),
           schema: variantEvaluationSchema,
           messages: [
             {

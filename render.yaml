@@ -1,24 +1,24 @@
-# Render Blueprint for the LinkedIn PR Sentiment Classifier API
+# Render Blueprint for the Lyra ML API (services/ml_api).
 # Docs: https://render.com/docs/blueprint-spec
 #
 # Deploy: push this repo to GitHub, then in the Render dashboard choose
 # "New +" -> "Blueprint" and point it at the repo. Render reads this file.
 #
-# The trained model artifacts in output/ are committed to the repo, so no
-# external object storage is required at deploy time.
+# This is the provider-free TF-IDF recruiting-signal engine. Trained model
+# artifacts in output/models/ are committed to the repo, so no external object
+# storage or AI provider key is required at deploy time.
 
 services:
   - type: web
-    name: pr-sentiment-api
+    name: lyra-ml-api
     runtime: python
     region: oregon
     plan: free               # always-free instance; sleeps after ~15 min idle (≈50s cold start on next request)
     branch: main
-    buildCommand: pip install --no-cache-dir -r requirements_api.txt
+    buildCommand: pip install --no-cache-dir -r services/ml_api/requirements.txt
     # gunicorn manages the process; UvicornWorker runs the ASGI app.
-    # --timeout 120 leaves headroom for the synchronous Gemini embedding call.
     startCommand: >-
-      gunicorn api:app
+      gunicorn services.ml_api.main:app
       --worker-class uvicorn.workers.UvicornWorker
       --bind 0.0.0.0:$PORT
       --workers ${WEB_CONCURRENCY:-1}
@@ -28,20 +28,16 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     envVars:
-      # Required — set the value in the Render dashboard (sync: false keeps the
-      # secret out of this file and out of git).
-      - key: GEMINI_API_KEY
-        sync: false
+      # Directory holding the trained TF-IDF model artifacts (output/models).
       - key: MODEL_DIR
-        value: output
-      # Lock to a single worker: the model + ML libs are memory-heavy and one
-      # worker fits comfortably on small instances. Raise once you size memory.
+        value: output/models
+      # The TF-IDF models load into each worker; one worker is plenty here.
       - key: WEB_CONCURRENCY
         value: "1"
-      # CORS: replace "*" with your frontend origin(s), comma-separated, in prod.
-      - key: ALLOWED_ORIGINS
-        value: "*"
-      - key: LOG_LEVEL
-        value: INFO
+      # CORS: the Next.js frontend origin allowed to call this API directly.
+      # (The app normally calls it server-side via app/api/analyze, so this
+      #  mainly matters if the browser hits it directly.)
+      - key: FRONTEND_ORIGIN
+        value: "http://localhost:3000"
       - key: PYTHON_VERSION
         value: "3.12.3"
