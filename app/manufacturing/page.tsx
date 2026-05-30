@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { Draft } from '@/lib/db/schema'
 
 export default function ManufacturingPage() {
@@ -194,11 +195,13 @@ export default function ManufacturingPage() {
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {imagePreviews.map((preview, index) => (
-                    <div key={index} className="relative group">
-                      <img
+                    <div key={index} className="relative group h-32">
+                      <Image
                         src={preview}
                         alt={`Preview ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg border border-gray-300 dark:border-gray-600"
+                        fill
+                        unoptimized
+                        className="object-cover rounded-lg border border-gray-300 dark:border-gray-600"
                       />
                       <button
                         type="button"
@@ -267,10 +270,13 @@ export default function ManufacturingPage() {
                         {draft.imageUrls && draft.imageUrls.length > 0 && (
                           <div className="mt-2 flex gap-2">
                             {draft.imageUrls.slice(0, 3).map((url, idx) => (
-                              <img
+                              <Image
                                 key={idx}
                                 src={url}
                                 alt={`Draft image ${idx + 1}`}
+                                width={64}
+                                height={64}
+                                unoptimized
                                 className="w-16 h-16 object-cover rounded border border-gray-300 dark:border-gray-600"
                               />
                             ))}

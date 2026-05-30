@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { Draft, CouncilFeedback as CouncilFeedbackRow } from '@/lib/db/schema'
 
 type CouncilFeedback = CouncilFeedbackRow & {
@@ -38,11 +39,7 @@ export default function DraftDetailPage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [deletingImages, setDeletingImages] = useState<string[]>([])
 
-  useEffect(() => {
-    fetchDraft()
-  }, [draftId])
-
-  const fetchDraft = async () => {
+  const fetchDraft = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -60,7 +57,11 @@ export default function DraftDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [draftId])
+
+  useEffect(() => {
+    fetchDraft()
+  }, [fetchDraft])
 
   const handleProcess = async () => {
     try {
@@ -241,11 +242,13 @@ export default function DraftDetailPage() {
                 {draft.imageUrls
                   .filter(url => !deletingImages.includes(url))
                   .map((url, index) => (
-                    <div key={index} className="relative group">
-                      <img
+                    <div key={index} className="relative group h-48">
+                      <Image
                         src={url}
                         alt={`Draft image ${index + 1}`}
-                        className="w-full h-48 object-cover rounded-lg border border-gray-300 dark:border-gray-600"
+                        fill
+                        unoptimized
+                        className="object-cover rounded-lg border border-gray-300 dark:border-gray-600"
                       />
                       {editingImages && (
                         <button
@@ -287,11 +290,13 @@ export default function DraftDetailPage() {
               {imagePreviews.length > 0 && (
                 <div className="mt-2 grid grid-cols-4 gap-2">
                   {imagePreviews.map((preview, idx) => (
-                    <div key={idx} className="relative">
-                      <img
+                    <div key={idx} className="relative h-24">
+                      <Image
                         src={preview}
                         alt={`Preview ${idx + 1}`}
-                        className="w-full h-24 object-cover rounded border"
+                        fill
+                        unoptimized
+                        className="object-cover rounded border"
                       />
                     </div>
                   ))}
@@ -499,9 +504,12 @@ export default function DraftDetailPage() {
                         <div className="mt-2 flex gap-2 flex-wrap">
                           {shipFormData.variantImagePreviews[index].map((preview, imgIdx) => (
                             <div key={imgIdx} className="relative">
-                              <img
+                              <Image
                                 src={preview}
                                 alt={`Preview ${imgIdx + 1}`}
+                                width={80}
+                                height={80}
+                                unoptimized
                                 className="w-20 h-20 object-cover rounded border"
                               />
                             </div>
