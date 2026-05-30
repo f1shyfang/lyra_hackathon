@@ -16,6 +16,10 @@ export async function PATCH(
     if (body.systemPrompt !== undefined) updates.systemPrompt = body.systemPrompt
     if (body.active !== undefined) updates.active = body.active
 
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+    }
+
     const persona = (
       await db.update(aiPersonas).set(updates).where(eq(aiPersonas.id, id)).returning()
     )[0]
@@ -39,7 +43,10 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    await db.delete(aiPersonas).where(eq(aiPersonas.id, id))
+    const deleted = (await db.delete(aiPersonas).where(eq(aiPersonas.id, id)).returning())[0]
+    if (!deleted) {
+      return NextResponse.json({ error: 'Persona not found' }, { status: 404 })
+    }
     return NextResponse.json({ success: true })
   } catch (error) {
     return NextResponse.json(
