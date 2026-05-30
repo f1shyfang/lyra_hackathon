@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Tables } from '@/types/supabase'
+import type { Draft, CouncilFeedback as CouncilFeedbackRow } from '@/lib/db/schema'
 
-type Draft = Tables<'drafts'>
-type CouncilFeedback = Tables<'council_feedback'> & {
-  ai_personas?: {
+type CouncilFeedback = CouncilFeedbackRow & {
+  persona?: {
     id: string
     name: string | null
-    system_prompt: string | null
+    systemPrompt: string | null
   }
 }
 
@@ -358,9 +357,9 @@ export default function SimulationResultsPage() {
                   <div className="contentBox">{draft.content || '(No content)'}</div>
                   
                   {/* Images */}
-                  {draft.image_urls && (draft.image_urls as string[]).length > 0 && (
+                  {draft.imageUrls && draft.imageUrls.length > 0 && (
                     <div className="images">
-                      {(draft.image_urls as string[]).map((url, index) => (
+                      {draft.imageUrls.map((url, index) => (
                         <img
                           key={index}
                           src={url}
@@ -373,26 +372,26 @@ export default function SimulationResultsPage() {
                 </div>
 
                 {/* Quality Scores */}
-                {(draft.avg_excitement_score !== null || draft.avg_cringe_score !== null || draft.quality_score !== null) && (
+                {(draft.avgExcitementScore !== null || draft.avgCringeScore !== null || draft.qualityScore !== null) && (
                   <div className="section">
                     <div className="sectionTitle">QUALITY SCORES</div>
                     <div className="scores">
-                      {draft.avg_excitement_score !== null && (
+                      {draft.avgExcitementScore !== null && (
                         <div className="scoreCard">
                           <div className="scoreLabel">Excitement</div>
-                          <div className="scoreValue scoreExcitement">{draft.avg_excitement_score}</div>
+                          <div className="scoreValue scoreExcitement">{draft.avgExcitementScore}</div>
                         </div>
                       )}
-                      {draft.avg_cringe_score !== null && (
+                      {draft.avgCringeScore !== null && (
                         <div className="scoreCard">
                           <div className="scoreLabel">Cringe</div>
-                          <div className="scoreValue scoreCringe">{draft.avg_cringe_score}</div>
+                          <div className="scoreValue scoreCringe">{draft.avgCringeScore}</div>
                         </div>
                       )}
-                      {draft.quality_score !== null && (
+                      {draft.qualityScore !== null && (
                         <div className="scoreCard">
                           <div className="scoreLabel">Quality</div>
-                          <div className="scoreValue scoreQuality">{draft.quality_score}</div>
+                          <div className="scoreValue scoreQuality">{draft.qualityScore}</div>
                         </div>
                       )}
                     </div>
@@ -410,22 +409,22 @@ export default function SimulationResultsPage() {
                         <div key={fb.id} className="feedbackCard">
                           <div className="feedbackHeader">
                             <div className="feedbackName">
-                              {fb.ai_personas?.name || 'Unknown Persona'}
+                              {fb.persona?.name || 'Unknown Persona'}
                             </div>
                             <div className="feedbackScores">
                               <span className="feedbackScore feedbackScoreExcitement">
-                                Excitement: {fb.excitement_score}/100
+                                Excitement: {fb.excitementScore}/100
                               </span>
                               <span className="feedbackScore feedbackScoreCringe">
-                                Cringe: {fb.cringe_score}/100
+                                Cringe: {fb.cringeScore}/100
                               </span>
                             </div>
                           </div>
                           <div className="feedbackText">{fb.critique}</div>
-                          {fb.specific_fix && (
+                          {fb.specificFix && (
                             <div className="feedbackFix">
                               <div className="feedbackFixLabel">Suggested Fix</div>
-                              <div className="feedbackFixText">{fb.specific_fix}</div>
+                              <div className="feedbackFixText">{fb.specificFix}</div>
                             </div>
                           )}
                         </div>

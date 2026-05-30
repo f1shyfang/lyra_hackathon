@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Tables } from '@/types/supabase'
-
-type Draft = Tables<'drafts'>
+import type { Draft } from '@/lib/db/schema'
 
 export default function ManufacturingPage() {
   const [drafts, setDrafts] = useState<Draft[]>([])
@@ -256,7 +254,7 @@ export default function ManufacturingPage() {
                           Pending
                         </span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(draft.created_at).toLocaleDateString()}
+                          {new Date(draft.createdAt).toLocaleDateString()}
                         </span>
                       </div>
                       
@@ -266,9 +264,9 @@ export default function ManufacturingPage() {
                             {draft.content}
                           </p>
                         )}
-                        {draft.image_urls && (draft.image_urls as string[]).length > 0 && (
+                        {draft.imageUrls && draft.imageUrls.length > 0 && (
                           <div className="mt-2 flex gap-2">
-                            {(draft.image_urls as string[]).slice(0, 3).map((url, idx) => (
+                            {draft.imageUrls.slice(0, 3).map((url, idx) => (
                               <img
                                 key={idx}
                                 src={url}
@@ -276,9 +274,9 @@ export default function ManufacturingPage() {
                                 className="w-16 h-16 object-cover rounded border border-gray-300 dark:border-gray-600"
                               />
                             ))}
-                            {(draft.image_urls as string[]).length > 3 && (
+                            {draft.imageUrls.length > 3 && (
                               <div className="w-16 h-16 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-400">
-                                +{(draft.image_urls as string[]).length - 3}
+                                +{draft.imageUrls.length - 3}
                               </div>
                             )}
                           </div>
@@ -333,9 +331,9 @@ export default function ManufacturingPage() {
                             {draft.content.substring(0, 100)}
                             {draft.content.length > 100 ? '...' : ''}
                           </p>
-                          {draft.quality_score !== null && (
+                          {draft.qualityScore !== null && (
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              Quality: {draft.quality_score}/100
+                              Quality: {draft.qualityScore}/100
                             </p>
                           )}
                         </Link>
@@ -375,14 +373,14 @@ export default function ManufacturingPage() {
                         {draft.content.length > 200 ? '...' : ''}
                       </p>
                       <div className="flex gap-4 text-sm text-gray-600 dark:text-gray-400">
-                        {draft.avg_excitement_score !== null && (
-                          <span>Excitement: {draft.avg_excitement_score}/100</span>
+                        {draft.avgExcitementScore !== null && (
+                          <span>Excitement: {draft.avgExcitementScore}/100</span>
                         )}
-                        {draft.avg_cringe_score !== null && (
-                          <span>Cringe: {draft.avg_cringe_score}/100</span>
+                        {draft.avgCringeScore !== null && (
+                          <span>Cringe: {draft.avgCringeScore}/100</span>
                         )}
-                        {draft.quality_score !== null && (
-                          <span className="font-semibold">Quality: {draft.quality_score}/100</span>
+                        {draft.qualityScore !== null && (
+                          <span className="font-semibold">Quality: {draft.qualityScore}/100</span>
                         )}
                       </div>
                     </div>
@@ -395,7 +393,7 @@ export default function ManufacturingPage() {
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Created: {new Date(draft.created_at).toLocaleString()}
+                    Created: {new Date(draft.createdAt).toLocaleString()}
                   </p>
                 </Link>
               ))}

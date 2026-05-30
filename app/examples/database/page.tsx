@@ -1,6 +1,5 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
@@ -8,33 +7,24 @@ export default function DatabaseExample() {
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true)
         setError(null)
-        
-        // Example: Query from a table (replace 'your_table' with your actual table name)
-        // const { data: result, error: queryError } = await supabase
-        //   .from('your_table')
-        //   .select('*')
-        //   .limit(10)
-        
-        // For now, we'll just test the connection
-        const { data: result, error: queryError } = await supabase
-          .from('drafts')
-          .select('id')
-          .limit(1)
-          .maybeSingle()
 
-        if (queryError) {
-          // This is expected if the table doesn't exist - it's just a connection test
-          console.log('Connection test:', queryError.message)
+        // Connection test: fetch drafts via the server API route (Drizzle/Neon).
+        const res = await fetch('/api/drafts?limit=1')
+        const result = await res.json()
+
+        if (!res.ok) {
+          // This is just a connection test - log and show empty.
+          console.log('Connection test:', result.error)
           setData([])
         } else {
-          setData(result ? [result] : [])
+          const first = (result.drafts || [])[0]
+          setData(first ? [first] : [])
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred')
@@ -74,7 +64,7 @@ export default function DatabaseExample() {
           {!loading && !error && (
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-4">
               <p className="text-green-800 dark:text-green-200">
-                ✓ Successfully connected to Supabase
+                ✓ Successfully connected to the database
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                 To query your tables, update the code in app/examples/database/page.tsx

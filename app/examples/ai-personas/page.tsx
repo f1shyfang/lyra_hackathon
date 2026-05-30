@@ -1,11 +1,8 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Tables } from '@/types/supabase'
-
-type AIPersona = Tables<'ai_personas'>
+import type { AiPersona } from '@/lib/db/schema'
 
 interface PersonaDisplay {
   id: string
@@ -15,7 +12,7 @@ interface PersonaDisplay {
   active: boolean
 }
 
-// Helper functions to map between HTML format and Supabase format
+// Helper functions to map between HTML format and the persona record format
 function parseSystemPrompt(systemPrompt: string | null): { desc: string; tags: string[] } {
   if (!systemPrompt) return { desc: '', tags: [] }
   
@@ -48,8 +45,8 @@ function buildSystemPrompt(desc: string, tags: string[]): string {
   return parts.join('\n\n') || ''
 }
 
-function supabaseToDisplay(persona: AIPersona): PersonaDisplay {
-  const { desc, tags } = parseSystemPrompt(persona.system_prompt)
+function personaToDisplay(persona: AiPersona): PersonaDisplay {
+  const { desc, tags } = parseSystemPrompt(persona.systemPrompt)
   return {
     id: persona.id,
     title: persona.name || 'Untitled persona',
@@ -59,10 +56,10 @@ function supabaseToDisplay(persona: AIPersona): PersonaDisplay {
   }
 }
 
-function displayToSupabase(display: PersonaDisplay): Partial<AIPersona> {
+function displayToPersona(display: PersonaDisplay): Partial<AiPersona> {
   return {
     name: display.title,
-    system_prompt: buildSystemPrompt(display.desc, display.tags),
+    systemPrompt: buildSystemPrompt(display.desc, display.tags),
     active: display.active,
   }
 }
@@ -86,8 +83,7 @@ function iconFor(p: PersonaDisplay): string {
 
 export default function AIPersonasPage() {
   const router = useRouter()
-  const supabase = createClient()
-  
+
   const [personas, setPersonas] = useState<PersonaDisplay[]>([])
   const [filtered, setFiltered] = useState<PersonaDisplay[]>([])
   const [loading, setLoading] = useState(true)
@@ -128,13 +124,10 @@ export default function AIPersonasPage() {
   const fetchPersonas = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('ai_personas')
-        .select('*')
-        .order('name', { ascending: true })
-
-      if (error) throw error
-      const displayPersonas = (data || []).map(supabaseToDisplay)
+      const res = await fetch('/api/personas?includeInactive=true')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch personas')
+      const displayPersonas = ((data.personas as AiPersona[]) || []).map(personaToDisplay)
       setPersonas(displayPersonas)
     } catch (err) {
       console.error('Failed to fetch personas:', err)
@@ -199,40 +192,36 @@ export default function AIPersonasPage() {
         active: true,
       }
 
-      const supabaseData = displayToSupabase(displayData)
+      const personaData = displayToPersona(displayData)
 
       // Check if persona exists (skip check if it's a temp ID)
       const isTempId = editingId.startsWith('temp-')
       const existing = !isTempId ? personas.find(p => p.id === editingId) : null
-      
+
       if (existing) {
         // Update
-        const { error, data } = await supabase
-          .from('ai_personas')
-          .update(supabaseData)
-          .eq('id', editingId)
-          .select()
-        
-        if (error) {
-          console.error('Update error:', error)
-          throw new Error(error.message || 'Failed to update persona')
+        const res = await fetch(`/api/personas/${editingId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(personaData),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          console.error('Update error:', data.error)
+          throw new Error(data.error || 'Failed to update persona')
         }
       } else {
-        // Create - let Supabase generate the ID
-        const { error, data } = await supabase
-          .from('ai_personas')
-          .insert([supabaseData])
-          .select()
-        
-        if (error) {
-          console.error('Insert error:', error)
-          console.error('Data being inserted:', supabaseData)
-          throw new Error(error.message || 'Failed to create persona')
-        }
-        
-        // Update editingId with the generated ID if we got one
-        if (data && data[0]?.id) {
-          // The ID is now set, but we'll refresh the list anyway
+        // Create - let the server generate the ID
+        const res = await fetch('/api/personas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(personaData),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          console.error('Insert error:', data.error)
+          console.error('Data being inserted:', personaData)
+          throw new Error(data.error || 'Failed to create persona')
         }
       }
 
@@ -249,11 +238,11 @@ export default function AIPersonasPage() {
     if (!confirm('Delete this persona?')) return
 
     try {
-      const { error } = await supabase
-        .from('ai_personas')
-        .delete()
-        .eq('id', id)
-      if (error) throw error
+      const res = await fetch(`/api/personas/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to delete persona')
+      }
 
       // Clean up selected tags
       const remainingTags = new Set(getAllTags())
@@ -275,7 +264,7 @@ export default function AIPersonasPage() {
     if (!persona) return
 
     const newPersona: PersonaDisplay = {
-      id: '', // Will be generated by Supabase
+      id: '', // Will be generated by the server
       title: persona.title + ' (copy)',
       desc: persona.desc,
       tags: [...persona.tags],
@@ -283,18 +272,19 @@ export default function AIPersonasPage() {
     }
 
     try {
-      const supabaseData = displayToSupabase(newPersona)
-      // Don't pass id - let Supabase generate it
-      const { error } = await supabase
-        .from('ai_personas')
-        .insert([supabaseData])
-        .select()
-      
-      if (error) {
-        console.error('Duplicate error:', error)
-        throw new Error(error.message || 'Failed to duplicate persona')
+      const personaData = displayToPersona(newPersona)
+      // Don't pass id - let the server generate it
+      const res = await fetch('/api/personas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(personaData),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        console.error('Duplicate error:', data.error)
+        throw new Error(data.error || 'Failed to duplicate persona')
       }
-      
+
       await fetchPersonas()
     } catch (err) {
       console.error('Failed to duplicate persona:', err)

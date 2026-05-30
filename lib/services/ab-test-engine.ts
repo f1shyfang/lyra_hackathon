@@ -1,10 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+import { abTests, abTestVariants, abTestEvaluations, aiPersonas,
+  type AiPersona, type ABTestVariant, type ABTest } from '@/lib/db/schema'
+import { eq, and, asc } from 'drizzle-orm'
 import { getPersonaVariantEvaluation } from '@/lib/google-ai/client'
-import { Tables } from '@/types/supabase'
-
-type Persona = Tables<'ai_personas'>
-type Variant = Tables<'ab_test_variants'>
-type ABTest = Tables<'ab_tests'>
 
 export interface ABTestRunResult {
   abTestId: string
@@ -32,66 +30,40 @@ export interface ABTestRunResult {
  * Run A/B test using personas as simulated users
  */
 export async function runABTest(abTestId: string): Promise<ABTestRunResult> {
-  const supabase = await createClient()
-
   // Get A/B test
-  const { data: abTest, error: abTestError } = await supabase
-    .from('ab_tests')
-    .select('*')
-    .eq('id', abTestId)
-    .single()
-
-  if (abTestError || !abTest) {
-    throw new Error('A/B test not found')
-  }
+  const abTest = (await db.select().from(abTests).where(eq(abTests.id, abTestId)))[0]
+  if (!abTest) throw new Error('A/B test not found')
 
   // Get all variants
-  const { data: variants, error: variantsError } = await supabase
-    .from('ab_test_variants')
-    .select('*')
-    .eq('ab_test_id', abTestId)
-    .order('name', { ascending: true })
-
-  if (variantsError || !variants || variants.length === 0) {
-    throw new Error('No variants found for A/B test')
-  }
+  const variants = await db.select().from(abTestVariants)
+    .where(eq(abTestVariants.abTestId, abTestId)).orderBy(asc(abTestVariants.name))
+  if (!variants.length) throw new Error('No variants found for A/B test')
 
   // Get all active personas
-  const { data: personas, error: personasError } = await supabase
-    .from('ai_personas')
-    .select('*')
-    .eq('active', true)
-
-  if (personasError || !personas || personas.length === 0) {
-    throw new Error('No active personas found')
-  }
+  const personas = await db.select().from(aiPersonas).where(eq(aiPersonas.active, true))
+  if (!personas.length) throw new Error('No active personas found')
 
   // Update test status to running
   if (abTest.status === 'draft') {
-    await supabase
-      .from('ab_tests')
-      .update({
-        status: 'running',
-        started_at: new Date().toISOString(),
-      })
-      .eq('id', abTestId)
+    await db.update(abTests).set({ status: 'running', startedAt: new Date() })
+      .where(eq(abTests.id, abTestId))
   }
 
   // Run evaluations based on algorithm
   const evaluations: ABTestRunResult['evaluations'] = []
 
   if (abTest.algorithm === 'epsilon_greedy') {
-    await runEpsilonGreedy(abTest, variants, personas, evaluations, supabase)
+    await runEpsilonGreedy(abTest, variants, personas, evaluations)
   } else if (abTest.algorithm === 'fixed_split') {
-    await runFixedSplit(abTest, variants, personas, evaluations, supabase)
+    await runFixedSplit(abTest, variants, personas, evaluations)
   } else {
     // Default: evaluate all variants with all personas
-    await runFullEvaluation(variants, personas, evaluations, supabase, abTestId)
+    await runFullEvaluation(variants, personas, evaluations, abTestId)
   }
 
   // Calculate variant statistics
   const variantStats = calculateVariantStats(variants, evaluations)
-  
+
   // Determine winner
   const winner = variantStats.length > 0
     ? variantStats.reduce((best, current) =>
@@ -103,13 +75,10 @@ export async function runABTest(abTestId: string): Promise<ABTestRunResult> {
   for (const stat of variantStats) {
     const variant = variants.find(v => v.id === stat.variantId)
     if (variant) {
-      await supabase
-        .from('ab_test_variants')
-        .update({
-          total_evaluations: stat.totalEvaluations,
-          total_score: stat.avgScore * stat.totalEvaluations,
-        })
-        .eq('id', stat.variantId)
+      await db.update(abTestVariants).set({
+        totalEvaluations: stat.totalEvaluations,
+        totalScore: Math.round(stat.avgScore * stat.totalEvaluations),
+      }).where(eq(abTestVariants.id, stat.variantId))
     }
   }
 
@@ -131,18 +100,17 @@ export async function runABTest(abTestId: string): Promise<ABTestRunResult> {
  */
 async function runEpsilonGreedy(
   abTest: ABTest,
-  variants: Variant[],
-  personas: Persona[],
-  evaluations: ABTestRunResult['evaluations'],
-  supabase: Awaited<ReturnType<typeof createClient>>
+  variants: ABTestVariant[],
+  personas: AiPersona[],
+  evaluations: ABTestRunResult['evaluations']
 ) {
-  const epsilon = abTest.epsilon || 0.1
+  const epsilon = Number(abTest.epsilon ?? 0.1)
 
   // First, get current variant stats to determine best variant
-  const currentStats = await getCurrentVariantStats(abTest.id, supabase)
-  
+  const currentStats = await getCurrentVariantStats(abTest.id)
+
   for (const persona of personas) {
-    let selectedVariant: Variant
+    let selectedVariant: ABTestVariant
 
     // Epsilon-greedy selection
     if (Math.random() < epsilon) {
@@ -165,26 +133,22 @@ async function runEpsilonGreedy(
     try {
       const multimodalContent = {
         text: selectedVariant.content,
-        imageUrls: (selectedVariant.image_urls as string[] | null) || undefined,
+        imageUrls: selectedVariant.imageUrls ?? undefined,
       }
       const evaluation = await getPersonaVariantEvaluation(
-        persona.system_prompt || '',
+        persona.systemPrompt || '',
         multimodalContent
       )
 
       // Save evaluation
-      const { data: savedEval, error: evalError } = await supabase
-        .from('ab_test_evaluations')
-        .insert({
-          ab_test_id: abTest.id,
-          variant_id: selectedVariant.id,
-          persona_id: persona.id,
-          score: evaluation.score,
-        })
-        .select()
-        .single()
+      const savedEval = (await db.insert(abTestEvaluations).values({
+        abTestId: abTest.id,
+        variantId: selectedVariant.id,
+        personaId: persona.id,
+        score: evaluation.score,
+      }).returning())[0]
 
-      if (!evalError && savedEval) {
+      if (savedEval) {
         evaluations.push({
           variantId: selectedVariant.id,
           variantName: selectedVariant.name,
@@ -220,10 +184,9 @@ async function runEpsilonGreedy(
  */
 async function runFixedSplit(
   abTest: ABTest,
-  variants: Variant[],
-  personas: Persona[],
-  evaluations: ABTestRunResult['evaluations'],
-  supabase: Awaited<ReturnType<typeof createClient>>
+  variants: ABTestVariant[],
+  personas: AiPersona[],
+  evaluations: ABTestRunResult['evaluations']
 ) {
   const personasPerVariant = Math.ceil(personas.length / variants.length)
 
@@ -235,21 +198,19 @@ async function runFixedSplit(
     try {
       const multimodalContent = {
         text: variant.content,
-        imageUrls: (variant.image_urls as string[] | null) || undefined,
+        imageUrls: variant.imageUrls ?? undefined,
       }
       const evaluation = await getPersonaVariantEvaluation(
-        persona.system_prompt || '',
+        persona.systemPrompt || '',
         multimodalContent
       )
 
-      await supabase
-        .from('ab_test_evaluations')
-        .insert({
-          ab_test_id: abTest.id,
-          variant_id: variant.id,
-          persona_id: persona.id,
-          score: evaluation.score,
-        })
+      await db.insert(abTestEvaluations).values({
+        abTestId: abTest.id,
+        variantId: variant.id,
+        personaId: persona.id,
+        score: evaluation.score,
+      })
 
       evaluations.push({
         variantId: variant.id,
@@ -268,20 +229,19 @@ async function runFixedSplit(
  * Full evaluation: each persona evaluates all variants
  */
 async function runFullEvaluation(
-  variants: Variant[],
-  personas: Persona[],
+  variants: ABTestVariant[],
+  personas: AiPersona[],
   evaluations: ABTestRunResult['evaluations'],
-  supabase: Awaited<ReturnType<typeof createClient>>,
   abTestId: string
 ) {
   for (const persona of personas) {
-    const personaEvaluations: Array<{ variant: Variant; score: number }> = []
+    const personaEvaluations: Array<{ variant: ABTestVariant; score: number }> = []
 
     // Evaluate all variants
     for (const variant of variants) {
       try {
         const evaluation = await getPersonaVariantEvaluation(
-          persona.system_prompt || '',
+          persona.systemPrompt || '',
           variant.content
         )
 
@@ -290,14 +250,12 @@ async function runFullEvaluation(
           score: evaluation.score,
         })
 
-        await supabase
-          .from('ab_test_evaluations')
-          .insert({
-            ab_test_id: abTestId,
-            variant_id: variant.id,
-            persona_id: persona.id,
-            score: evaluation.score,
-          })
+        await db.insert(abTestEvaluations).values({
+          abTestId,
+          variantId: variant.id,
+          personaId: persona.id,
+          score: evaluation.score,
+        })
 
         evaluations.push({
           variantId: variant.id,
@@ -314,12 +272,12 @@ async function runFullEvaluation(
     // Set preference ranks
     personaEvaluations.sort((a, b) => b.score - a.score)
     for (let i = 0; i < personaEvaluations.length; i++) {
-      await supabase
-        .from('ab_test_evaluations')
-        .update({ preference_rank: i + 1 })
-        .eq('ab_test_id', abTestId)
-        .eq('variant_id', personaEvaluations[i].variant.id)
-        .eq('persona_id', persona.id)
+      await db.update(abTestEvaluations).set({ preferenceRank: i + 1 })
+        .where(and(
+          eq(abTestEvaluations.abTestId, abTestId),
+          eq(abTestEvaluations.variantId, personaEvaluations[i].variant.id),
+          eq(abTestEvaluations.personaId, persona.id),
+        ))
     }
   }
 }
@@ -327,21 +285,16 @@ async function runFullEvaluation(
 /**
  * Get current variant statistics from database
  */
-async function getCurrentVariantStats(
-  abTestId: string,
-  supabase: Awaited<ReturnType<typeof createClient>>
-) {
-  const { data: variants } = await supabase
-    .from('ab_test_variants')
-    .select('id, name, total_evaluations, total_score, avg_score')
-    .eq('ab_test_id', abTestId)
+async function getCurrentVariantStats(abTestId: string) {
+  const variants = await db.select().from(abTestVariants)
+    .where(eq(abTestVariants.abTestId, abTestId))
 
-  return (variants || []).map(v => ({
+  return variants.map(v => ({
     variantId: v.id,
     variantName: v.name,
-    totalEvaluations: v.total_evaluations || 0,
-    totalScore: v.total_score || 0,
-    avgScore: v.avg_score || 0,
+    totalEvaluations: v.totalEvaluations || 0,
+    totalScore: v.totalScore || 0,
+    avgScore: Number(v.avgScore ?? 0),
   }))
 }
 
@@ -349,7 +302,7 @@ async function getCurrentVariantStats(
  * Calculate variant statistics from evaluations
  */
 function calculateVariantStats(
-  variants: Variant[],
+  variants: ABTestVariant[],
   evaluations: ABTestRunResult['evaluations']
 ): ABTestRunResult['variantStats'] {
   const statsMap = new Map<string, { totalScore: number; count: number }>()
@@ -372,4 +325,3 @@ function calculateVariantStats(
     }
   })
 }
-

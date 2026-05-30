@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+import { abTests, abTestVariants, abTestEvaluations } from '@/lib/db/schema'
+import { eq, desc, asc } from 'drizzle-orm'
 
 export async function GET(
   request: NextRequest,
@@ -8,23 +10,13 @@ export async function GET(
   try {
     const { id } = await params
 
-    const supabase = await createClient()
-
     // Get A/B test with draft
-    const { data: abTest, error: abTestError } = await supabase
-      .from('ab_tests')
-      .select(`
-        *,
-        drafts (
-          id,
-          content,
-          status
-        )
-      `)
-      .eq('id', id)
-      .single()
+    const abTest = await db.query.abTests.findFirst({
+      where: eq(abTests.id, id),
+      with: { draft: { columns: { id: true, content: true, status: true } } },
+    })
 
-    if (abTestError || !abTest) {
+    if (!abTest) {
       return NextResponse.json(
         { error: 'A/B test not found' },
         { status: 404 }
@@ -32,42 +24,27 @@ export async function GET(
     }
 
     // Get variants
-    const { data: variants, error: variantsError } = await supabase
-      .from('ab_test_variants')
-      .select('*')
-      .eq('ab_test_id', id)
-      .order('name', { ascending: true })
+    const variants = await db
+      .select()
+      .from(abTestVariants)
+      .where(eq(abTestVariants.abTestId, id))
+      .orderBy(asc(abTestVariants.name))
 
-    if (variantsError) {
-      console.error('Error fetching variants:', variantsError)
-    }
-
-    // Get evaluations
-    const { data: evaluations, error: evaluationsError } = await supabase
-      .from('ab_test_evaluations')
-      .select(`
-        *,
-        ab_test_variants (
-          id,
-          name
-        ),
-        ai_personas (
-          id,
-          name
-        )
-      `)
-      .eq('ab_test_id', id)
-      .order('created_at', { ascending: false })
-
-    if (evaluationsError) {
-      console.error('Error fetching evaluations:', evaluationsError)
-    }
+    // Get evaluations (with variant + persona)
+    const evaluations = await db.query.abTestEvaluations.findMany({
+      where: eq(abTestEvaluations.abTestId, id),
+      orderBy: desc(abTestEvaluations.createdAt),
+      with: {
+        variant: { columns: { id: true, name: true } },
+        persona: { columns: { id: true, name: true } },
+      },
+    })
 
     return NextResponse.json({
       success: true,
       abTest,
-      variants: variants || [],
-      evaluations: evaluations || [],
+      variants,
+      evaluations,
     })
   } catch (error) {
     console.error('Error in GET /api/ab-tests/[id]:', error)
@@ -86,16 +63,20 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
-    const supabase = await createClient()
-
-    // Only allow updating specific fields
-    const allowedFields = ['name', 'status', 'algorithm', 'epsilon']
+    // Only allow updating specific fields (map to camelCase keys)
     const updates: Record<string, any> = {}
 
-    for (const field of allowedFields) {
-      if (field in body) {
-        updates[field] = body[field]
-      }
+    if ('name' in body) {
+      updates.name = body.name
+    }
+    if ('status' in body) {
+      updates.status = body.status
+    }
+    if ('algorithm' in body) {
+      updates.algorithm = body.algorithm
+    }
+    if ('epsilon' in body) {
+      updates.epsilon = String(body.epsilon)
     }
 
     if (Object.keys(updates).length === 0) {
@@ -105,25 +86,16 @@ export async function PATCH(
       )
     }
 
-    // If status is being set to completed, set ended_at
+    // If status is being set to completed, set endedAt
     if (updates.status === 'completed') {
-      updates.ended_at = new Date().toISOString()
+      updates.endedAt = new Date()
     }
 
-    const { data: abTest, error } = await supabase
-      .from('ab_tests')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error updating A/B test:', error)
-      return NextResponse.json(
-        { error: `Failed to update A/B test: ${error.message}` },
-        { status: 500 }
-      )
-    }
+    const abTest = (await db
+      .update(abTests)
+      .set(updates)
+      .where(eq(abTests.id, id))
+      .returning())[0]
 
     if (!abTest) {
       return NextResponse.json(
@@ -141,4 +113,3 @@ export async function PATCH(
     )
   }
 }
-

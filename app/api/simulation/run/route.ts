@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+import { drafts, aiPersonas } from '@/lib/db/schema'
+import { eq, and, inArray } from 'drizzle-orm'
 import { uploadImages } from '@/lib/storage/image-upload'
 import { runSimulationWithPersonas } from '@/lib/services/council-processor'
 
@@ -42,26 +44,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
-
     // 1. Create draft first to get the ID
-    const { data: draft, error: draftError } = await supabase
-      .from('drafts')
-      .insert({
+    const draft = (await db
+      .insert(drafts)
+      .values({
         content: content.trim(),
         status: 'pending',
-        image_urls: [],
+        imageUrls: [],
       })
-      .select()
-      .single()
-
-    if (draftError) {
-      console.error('Error creating draft:', draftError)
-      return NextResponse.json(
-        { error: `Failed to create draft: ${draftError.message}` },
-        { status: 500 }
-      )
-    }
+      .returning())[0]
 
     // 2. Upload images if provided
     let imageUrls: string[] = []
@@ -71,15 +62,7 @@ export async function POST(request: NextRequest) {
         imageUrls = uploadedImages.map(img => img.url)
 
         // Update draft with image URLs
-        const { error: updateError } = await supabase
-          .from('drafts')
-          .update({ image_urls: imageUrls })
-          .eq('id', draft.id)
-
-        if (updateError) {
-          console.error('Error updating draft with images:', updateError)
-          // Don't fail the request, just log the error
-        }
+        await db.update(drafts).set({ imageUrls }).where(eq(drafts.id, draft.id))
       } catch (uploadError) {
         console.error('Error uploading images:', uploadError)
         // Continue without images if upload fails
@@ -87,21 +70,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Fetch selected personas
-    const { data: personas, error: personasError } = await supabase
-      .from('ai_personas')
-      .select('*')
-      .in('id', personaIds)
-      .eq('active', true)
+    const personas = await db
+      .select()
+      .from(aiPersonas)
+      .where(and(inArray(aiPersonas.id, personaIds), eq(aiPersonas.active, true)))
 
-    if (personasError) {
-      console.error('Error fetching personas:', personasError)
-      return NextResponse.json(
-        { error: `Failed to fetch personas: ${personasError.message}` },
-        { status: 500 }
-      )
-    }
-
-    if (!personas || personas.length === 0) {
+    if (!personas.length) {
       return NextResponse.json(
         { error: 'No valid personas found for the selected IDs' },
         { status: 400 }

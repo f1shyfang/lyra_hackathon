@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Tables } from '@/types/supabase'
+import type { ABTest as ABTestRow } from '@/lib/db/schema'
 
-type ABTest = Tables<'ab_tests'> & {
-  drafts?: {
+type ABTest = ABTestRow & {
+  draft?: {
     id: string
     content: string
     status: string
@@ -100,10 +100,10 @@ export default function ABTestsPage() {
                         <span>Epsilon: {test.epsilon}</span>
                       )}
                     </div>
-                    {test.drafts && (
+                    {test.draft && (
                       <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                        {test.drafts.content.substring(0, 150)}
-                        {test.drafts.content.length > 150 ? '...' : ''}
+                        {test.draft.content.substring(0, 150)}
+                        {test.draft.content.length > 150 ? '...' : ''}
                       </p>
                     )}
                   </div>
@@ -116,9 +116,9 @@ export default function ABTestsPage() {
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Created: {new Date(test.created_at).toLocaleString()}
-                  {test.started_at && (
-                    <> • Started: {new Date(test.started_at).toLocaleString()}</>
+                  Created: {new Date(test.createdAt).toLocaleString()}
+                  {test.startedAt && (
+                    <> • Started: {new Date(test.startedAt).toLocaleString()}</>
                   )}
                 </p>
               </Link>

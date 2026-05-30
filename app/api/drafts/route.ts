@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+import { drafts } from '@/lib/db/schema'
+import { eq, desc } from 'drizzle-orm'
 import { uploadImages } from '@/lib/storage/image-upload'
 
 export async function POST(request: NextRequest) {
@@ -16,26 +18,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
-
     // Create draft first to get the ID
-    const { data: draft, error: draftError } = await supabase
-      .from('drafts')
-      .insert({
+    const draft = (await db
+      .insert(drafts)
+      .values({
         content: content.trim(),
         status: 'pending',
-        image_urls: [],
+        imageUrls: [],
       })
-      .select()
-      .single()
-
-    if (draftError) {
-      console.error('Error creating draft:', draftError)
-      return NextResponse.json(
-        { error: `Failed to create draft: ${draftError.message}` },
-        { status: 500 }
-      )
-    }
+      .returning())[0]
 
     // Upload images if provided
     let imageUrls: string[] = []
@@ -45,15 +36,7 @@ export async function POST(request: NextRequest) {
         imageUrls = uploadedImages.map(img => img.url)
 
         // Update draft with image URLs
-        const { error: updateError } = await supabase
-          .from('drafts')
-          .update({ image_urls: imageUrls })
-          .eq('id', draft.id)
-
-        if (updateError) {
-          console.error('Error updating draft with images:', updateError)
-          // Don't fail the request, just log the error
-        }
+        await db.update(drafts).set({ imageUrls }).where(eq(drafts.id, draft.id))
       } catch (uploadError) {
         console.error('Error uploading images:', uploadError)
         // Continue without images if upload fails
@@ -61,15 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch updated draft
-    const { data: updatedDraft, error: fetchError } = await supabase
-      .from('drafts')
-      .select('*')
-      .eq('id', draft.id)
-      .single()
-
-    if (fetchError) {
-      console.error('Error fetching updated draft:', fetchError)
-    }
+    const updatedDraft = (await db.select().from(drafts).where(eq(drafts.id, draft.id)))[0]
 
     return NextResponse.json(
       { success: true, draft: updatedDraft || draft },
@@ -91,29 +66,15 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
 
-    const supabase = await createClient()
+    const rows = await db
+      .select()
+      .from(drafts)
+      .where(status ? eq(drafts.status, status as any) : undefined)
+      .orderBy(desc(drafts.createdAt))
+      .limit(limit)
+      .offset(offset)
 
-    let query = supabase
-      .from('drafts')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
-
-    if (status) {
-      query = query.eq('status', status)
-    }
-
-    const { data: drafts, error } = await query
-
-    if (error) {
-      console.error('Error fetching drafts:', error)
-      return NextResponse.json(
-        { error: `Failed to fetch drafts: ${error.message}` },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({ success: true, drafts: drafts || [] })
+    return NextResponse.json({ success: true, drafts: rows })
   } catch (error) {
     console.error('Error in GET /api/drafts:', error)
     return NextResponse.json(
@@ -122,4 +83,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
