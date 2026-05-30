@@ -32,7 +32,10 @@ interface FormData {
   author_follower_count: number;
 }
 
-const API_URL = 'http://localhost:8000';
+// Calls the same-origin Next.js proxy (app/api/predict/route.ts), which forwards
+// to the FastAPI service at ML_API_URL. Avoids hardcoding the backend URL and
+// any browser CORS dependency.
+const PREDICT_ENDPOINT = '/api/predict';
 
 const examples = {
   1: {
@@ -91,7 +94,7 @@ export default function SentimentAnalyzer() {
     setResult(null);
 
     try {
-      const response = await fetch(`${API_URL}/predict`, {
+      const response = await fetch(PREDICT_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
