@@ -1,11 +1,8 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Tables } from '@/types/supabase'
-
-type AIPersona = Tables<'ai_personas'>
+import type { AiPersona } from '@/lib/db/schema'
 
 interface PersonaDisplay {
   id: string
@@ -41,8 +38,8 @@ function parseSystemPrompt(systemPrompt: string | null): { desc: string; tags: s
   return { desc, tags }
 }
 
-function supabaseToDisplay(persona: AIPersona): PersonaDisplay {
-  const { desc, tags } = parseSystemPrompt(persona.system_prompt)
+function personaToDisplay(persona: AiPersona): PersonaDisplay {
+  const { desc, tags } = parseSystemPrompt(persona.systemPrompt)
   return {
     id: persona.id,
     title: persona.name || 'Untitled persona',
@@ -63,8 +60,7 @@ function escapeHtml(s: string): string {
 
 export default function SimulationPage() {
   const router = useRouter()
-  const supabase = createClient()
-  
+
   const [personas, setPersonas] = useState<PersonaDisplay[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [prompt, setPrompt] = useState('')
@@ -88,14 +84,10 @@ export default function SimulationPage() {
   const fetchPersonas = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('ai_personas')
-        .select('*')
-        .eq('active', true)
-        .order('name', { ascending: true })
-
-      if (error) throw error
-      const displayPersonas = (data || []).map(supabaseToDisplay)
+      const res = await fetch('/api/personas')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch personas')
+      const displayPersonas = ((data.personas as AiPersona[]) || []).map(personaToDisplay)
       setPersonas(displayPersonas)
     } catch (err) {
       console.error('Failed to fetch personas:', err)

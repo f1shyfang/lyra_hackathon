@@ -1,17 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
-
-interface ContactSubmission {
-  id: string
-  name: string
-  email: string
-  subject: string
-  message: string
-  status: 'new' | 'read' | 'replied'
-  created_at: string
-}
+import type { ContactSubmission } from '@/lib/db/schema'
 
 export default function TestPage() {
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([])
@@ -24,20 +14,15 @@ export default function TestPage() {
     message: '',
   })
 
-  const supabase = createClient()
-
-  // Read data from Supabase
+  // Read data via the server API route (Drizzle/Neon)
   const fetchSubmissions = async () => {
     try {
       setLoading(true)
       setError(null)
-      const { data, error: fetchError } = await supabase
-        .from('contact_submissions' as any)
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (fetchError) throw fetchError
-      setSubmissions((data as unknown as ContactSubmission[]) || [])
+      const res = await fetch('/api/contact-submissions')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch submissions')
+      setSubmissions((data.submissions as ContactSubmission[]) || [])
     } catch (err: any) {
       setError(err.message || 'Failed to fetch submissions')
       console.error('Error fetching submissions:', err)
@@ -50,17 +35,18 @@ export default function TestPage() {
     fetchSubmissions()
   }, [])
 
-  // Write data to Supabase
+  // Write data via the server API route
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
       setError(null)
-      const { data, error: insertError } = await supabase
-        .from('contact_submissions' as any)
-        .insert([formData as any])
-        .select()
-
-      if (insertError) throw insertError
+      const res = await fetch('/api/contact-submissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to create submission')
 
       // Reset form and refresh list
       setFormData({ name: '', email: '', subject: '', message: '' })
@@ -76,12 +62,15 @@ export default function TestPage() {
   const updateStatus = async (id: string, newStatus: 'new' | 'read' | 'replied') => {
     try {
       setError(null)
-      const { error: updateError } = await supabase
-        .from('contact_submissions' as any)
-        .update({ status: newStatus })
-        .eq('id', id)
-
-      if (updateError) throw updateError
+      const res = await fetch(`/api/contact-submissions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to update submission')
+      }
       await fetchSubmissions()
     } catch (err: any) {
       setError(err.message || 'Failed to update submission')
@@ -95,12 +84,11 @@ export default function TestPage() {
 
     try {
       setError(null)
-      const { error: deleteError } = await supabase
-        .from('contact_submissions' as any)
-        .delete()
-        .eq('id', id)
-
-      if (deleteError) throw deleteError
+      const res = await fetch(`/api/contact-submissions/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to delete submission')
+      }
       await fetchSubmissions()
     } catch (err: any) {
       setError(err.message || 'Failed to delete submission')
@@ -233,7 +221,7 @@ export default function TestPage() {
                   <p className="text-gray-600 mb-3">{submission.message}</p>
                   <div className="flex justify-between items-center">
                     <p className="text-xs text-gray-500">
-                      {new Date(submission.created_at).toLocaleString()}
+                      {new Date(submission.createdAt).toLocaleString()}
                     </p>
                     <div className="flex gap-2">
                       <select
