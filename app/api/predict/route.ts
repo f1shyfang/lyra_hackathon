@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { enforceRateLimit } from '@/lib/ratelimit'
 
 // Server-side proxy to the PR-sentiment FastAPI service (api.py /predict).
 // Keeps the backend URL server-side (no CORS dependency from the browser) and
@@ -9,6 +10,9 @@ const ML_API_URL = process.env.ML_API_URL || 'http://localhost:8000'
 const DEFAULT_TIMEOUT_MS = 30000
 
 export async function POST(req: NextRequest) {
+  const limited = enforceRateLimit(req)
+  if (limited) return limited
+
   let body: { text?: string } & Record<string, unknown>
   try {
     body = await req.json()

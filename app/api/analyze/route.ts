@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { AnalyzeRequest, AnalyzeResponse } from '@/types/analyze'
+import { enforceRateLimit } from '@/lib/ratelimit'
 
 const DEFAULT_TIMEOUT_MS = 10000
 const ML_API_URL = process.env.ML_API_URL || 'http://localhost:8000'
 
 export async function POST(req: NextRequest) {
+  const limited = enforceRateLimit(req)
+  if (limited) return limited
+
   let body: AnalyzeRequest
   try {
     body = await req.json()

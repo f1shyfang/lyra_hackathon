@@ -1,29 +1,36 @@
-import { GoogleGenAI } from '@google/genai'
+import { generateText } from 'ai'
 import { NextRequest, NextResponse } from 'next/server'
+import { getModel } from '@/lib/ai/provider'
+import { withRateLimit } from '@/lib/google-ai/rate-limiter'
+import { enforceRateLimit } from '@/lib/ratelimit'
 
 export async function POST(request: NextRequest) {
+  // Inbound per-client rate limiting.
+  const limited = enforceRateLimit(request)
+  if (limited) return limited
+
   try {
-    const { prompt, model = 'gemini-2.5-flash' } = await request.json()
+    const { prompt, model } = await request.json()
 
     if (!prompt) {
-      return NextResponse.json(
-        { error: 'Prompt is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
     }
 
-    // The client gets the API key from the environment variable `GEMINI_API_KEY`
-    const ai = new GoogleGenAI({})
-
-    const response = await ai.models.generateContent({
-      model,
-      contents: prompt,
-    })
+    // Model resolved via getModel() — provider/model is swappable via AI_MODEL.
+    // An explicit `model` in the request body still overrides for one-off calls.
+    const { text } = await withRateLimit(
+      () =>
+        generateText({
+          model: getModel(model),
+          prompt,
+        }),
+      'gemini-route'
+    )
 
     return NextResponse.json({
       success: true,
-      response: response.text,
-      model: model,
+      response: text,
+      model: model || process.env.AI_MODEL || 'google/gemini-2.0-flash',
     })
   } catch (error: any) {
     console.error('Gemini API error:', error)
@@ -39,9 +46,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    message: 'Gemini API endpoint',
-    usage: 'POST with { "prompt": "your prompt", "model": "optional model name" }',
-    availableModels: ['gemini-2.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-pro'],
+    message: 'AI text generation endpoint (Vercel AI SDK)',
+    usage: 'POST with { "prompt": "your prompt", "model": "optional provider/model string" }',
+    defaultModel: process.env.AI_MODEL || 'google/gemini-2.0-flash',
   })
 }
-

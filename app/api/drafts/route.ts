@@ -3,8 +3,12 @@ import { db } from '@/lib/db'
 import { drafts } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { uploadImages } from '@/lib/storage/image-upload'
+import { enforceRateLimit } from '@/lib/ratelimit'
 
 export async function POST(request: NextRequest) {
+  const limited = enforceRateLimit(request)
+  if (limited) return limited
+
   try {
     const formData = await request.formData()
     const content = formData.get('content') as string | null

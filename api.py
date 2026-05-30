@@ -12,10 +12,14 @@ from datetime import datetime, timezone
 from typing import Dict, Optional
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
 from prediction_service import PRClassifierService
 
@@ -24,6 +28,29 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger("pr_api")
+
+
+# --- Rate limiting (slowapi) -------------------------------------------------
+# Per-client inbound rate limiting keyed by remote IP address. Mainly guards
+# the expensive /predict endpoint (Gemini embedding + XGBoost inference).
+#
+# RATE_LIMIT_PREDICT controls the /predict limit and is env-configurable so it
+# can be tuned without a code change (slowapi/limits syntax, e.g. "30/minute",
+# "100/hour", "5/second").
+#
+# NOTE: the default storage is in-memory and therefore PER-PROCESS. Under
+# gunicorn with multiple UvicornWorkers (or multiple Render instances), each
+# worker keeps its own counter, so the effective limit is multiplied by the
+# worker/instance count. For a globally consistent limit across workers/
+# instances, point RATELIMIT_STORAGE_URI at a shared store such as Redis
+# (e.g. "redis://host:6379/0"), which is passed through to the Limiter below.
+RATE_LIMIT_PREDICT = os.getenv("RATE_LIMIT_PREDICT", "30/minute")
+_RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI")  # optional shared store
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri=_RATELIMIT_STORAGE_URI,  # None -> in-memory (per-process) default
+)
 
 
 # Global service instance (populated during the lifespan startup)
@@ -87,6 +114,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Wire up rate limiting: register the limiter on app state (slowapi looks it up
+# there), install the middleware, and return HTTP 429 when a limit is exceeded.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 
 def _utc_now() -> str:
@@ -196,7 +229,8 @@ async def health_check():
 
 
 @app.post("/predict", response_model=PredictionResponse, tags=["Prediction"])
-async def predict_pr_sentiment(request: PredictionRequest):
+@limiter.limit(RATE_LIMIT_PREDICT)
+async def predict_pr_sentiment(request: Request, payload: PredictionRequest):
     """
     Predict PR sentiment for a LinkedIn post.
 
@@ -216,18 +250,18 @@ async def predict_pr_sentiment(request: PredictionRequest):
         # aren't blocked.
         result = await run_in_threadpool(
             prediction_service.predict,
-            text=request.text,
-            post_hour=request.post_hour,
-            post_day_of_week=request.post_day_of_week,
-            post_month=request.post_month,
-            has_media=request.has_media,
-            media_count=request.media_count,
-            media_type=request.media_type,
-            post_type=request.post_type,
-            author_follower_count=request.author_follower_count,
-            avg_sentiment=request.avg_sentiment,
-            median_sentiment=request.median_sentiment,
-            num_comments_analyzed=request.num_comments_analyzed,
+            text=payload.text,
+            post_hour=payload.post_hour,
+            post_day_of_week=payload.post_day_of_week,
+            post_month=payload.post_month,
+            has_media=payload.has_media,
+            media_count=payload.media_count,
+            media_type=payload.media_type,
+            post_type=payload.post_type,
+            author_follower_count=payload.author_follower_count,
+            avg_sentiment=payload.avg_sentiment,
+            median_sentiment=payload.median_sentiment,
+            num_comments_analyzed=payload.num_comments_analyzed,
         )
 
         result["timestamp"] = _utc_now()

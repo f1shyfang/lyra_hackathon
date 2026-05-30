@@ -34,7 +34,14 @@ trained LinkedIn PR sentiment classifier. The trained artifacts live in
 | `ALLOWED_ORIGINS` | | `*` | Comma-separated origins. With `*`, credentials are disabled (CORS spec). |
 | `WEB_CONCURRENCY` | | `1` | gunicorn workers. Each worker loads the model — raise only after checking memory. |
 | `LOG_LEVEL` | | `INFO` | |
+| `RATE_LIMIT_PREDICT` | | `30/minute` | Per-IP limit on `POST /predict` (slowapi/limits syntax, e.g. `100/hour`, `5/second`). Over-limit requests get a 429. |
+| `RATELIMIT_STORAGE_URI` | | (in-memory) | Shared rate-limit store, e.g. `redis://host:6379/0`. Without it the store is per-process — see caveat below. |
 | `PORT` | (Render-injected) | `8000` | Bound automatically by the start command. |
+
+> **Rate-limit caveat:** the default store is in-memory **per gunicorn worker**, so
+> with `WEB_CONCURRENCY` = N the effective global limit is roughly N× the
+> configured `RATE_LIMIT_PREDICT`. Set `RATELIMIT_STORAGE_URI` to a shared Redis
+> instance for a single, consistent global limit across all workers and instances.
 
 ## Verify after deploy
 
