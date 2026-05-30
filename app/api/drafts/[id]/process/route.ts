@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+import { drafts } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { runSimulation } from '@/lib/services/council-processor'
 import { evaluateQuality } from '@/lib/services/quality-gate'
 
@@ -10,17 +12,11 @@ export async function POST(
   try {
     const { id } = await params
     const { iterationNumber } = await request.json().catch(() => ({}))
-    
-    const supabase = await createClient()
 
     // Get draft
-    const { data: draft, error: draftError } = await supabase
-      .from('drafts')
-      .select('*')
-      .eq('id', id)
-      .single()
+    const draft = (await db.select().from(drafts).where(eq(drafts.id, id)))[0]
 
-    if (draftError || !draft) {
+    if (!draft) {
       return NextResponse.json(
         { error: 'Draft not found' },
         { status: 404 }
@@ -31,7 +27,7 @@ export async function POST(
     const result = await runSimulation(
       id,
       draft.content,
-      iterationNumber || (draft.iteration_count || 0) + 1
+      iterationNumber || (draft.iterationCount || 0) + 1
     )
 
     // Evaluate quality gate

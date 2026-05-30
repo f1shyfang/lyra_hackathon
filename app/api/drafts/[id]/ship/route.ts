@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+import { drafts, abTests, abTestVariants } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { evaluateQuality } from '@/lib/services/quality-gate'
 import { uploadImages } from '@/lib/storage/image-upload'
 
@@ -10,17 +12,11 @@ export async function POST(
   try {
     const { id } = await params
     const contentType = request.headers.get('content-type') || ''
-    
-    const supabase = await createClient()
 
     // Get draft
-    const { data: draft, error: draftError } = await supabase
-      .from('drafts')
-      .select('*')
-      .eq('id', id)
-      .single()
+    const draft = (await db.select().from(drafts).where(eq(drafts.id, id)))[0]
 
-    if (draftError || !draft) {
+    if (!draft) {
       return NextResponse.json(
         { error: 'Draft not found' },
         { status: 404 }
@@ -93,54 +89,44 @@ export async function POST(
     }
 
     // Create A/B test
-    const { data: abTest, error: abTestError } = await supabase
-      .from('ab_tests')
-      .insert({
-        draft_id: id,
+    const abTest = (await db
+      .insert(abTests)
+      .values({
+        draftId: id,
         name: name || `A/B Test for Draft ${id.substring(0, 8)}`,
         status: 'draft',
         algorithm,
-        epsilon: algorithm === 'epsilon_greedy' ? epsilon : null,
+        epsilon: algorithm === 'epsilon_greedy' ? String(epsilon) : null,
       })
-      .select()
-      .single()
-
-    if (abTestError) {
-      console.error('Error creating A/B test:', abTestError)
-      return NextResponse.json(
-        { error: `Failed to create A/B test: ${abTestError.message}` },
-        { status: 500 }
-      )
-    }
+      .returning())[0]
 
     // Create variants
     const variantInserts = variants.map((variant, index: number) => ({
-      ab_test_id: abTest.id,
+      abTestId: abTest.id,
       name: `variant_${String.fromCharCode(97 + index)}`, // variant_a, variant_b, etc.
       content: variant.content,
-      image_urls: variant.imageUrls || [],
+      imageUrls: variant.imageUrls || [],
     }))
 
-    const { data: createdVariants, error: variantsError } = await supabase
-      .from('ab_test_variants')
-      .insert(variantInserts)
-      .select()
-
-    if (variantsError) {
+    let createdVariants
+    try {
+      createdVariants = await db.insert(abTestVariants).values(variantInserts).returning()
+    } catch (variantsError) {
       console.error('Error creating variants:', variantsError)
       // Clean up A/B test if variants fail
-      await supabase.from('ab_tests').delete().eq('id', abTest.id)
+      await db.delete(abTests).where(eq(abTests.id, abTest.id))
       return NextResponse.json(
-        { error: `Failed to create variants: ${variantsError.message}` },
+        {
+          error: `Failed to create variants: ${
+            variantsError instanceof Error ? variantsError.message : 'Unknown error'
+          }`,
+        },
         { status: 500 }
       )
     }
 
     // Update draft status to shipped
-    await supabase
-      .from('drafts')
-      .update({ status: 'shipped' })
-      .eq('id', id)
+    await db.update(drafts).set({ status: 'shipped' }).where(eq(drafts.id, id))
 
     return NextResponse.json({
       success: true,
