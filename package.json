@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:web\" \"npm run dev:ml\"",
     "dev:web": "next dev",
-    "dev:ml": "uvicorn api:app --reload --host 0.0.0.0 --port 8000",
+    "dev:ml": "uvicorn services.ml_api.main:app --reload --host 0.0.0.0 --port 8000",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -25,6 +25,7 @@
   "homepage": "https://github.com/f1shyfang/lyra_hackathon#readme",
   "dependencies": {
     "@ai-sdk/google": "^3.0.80",
+    "@ai-sdk/openai": "^3.0.67",
     "@google/genai": "^1.33.0",
     "@neondatabase/serverless": "^1.1.0",
     "@supabase/ssr": "^0.8.0",

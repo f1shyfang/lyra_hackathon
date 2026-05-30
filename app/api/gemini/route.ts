@@ -1,6 +1,6 @@
 import { generateText } from 'ai'
 import { NextRequest, NextResponse } from 'next/server'
-import { getModel } from '@/lib/ai/provider'
+import { getModel, DEFAULT_AI_MODEL } from '@/lib/ai/provider'
 import { withRateLimit } from '@/lib/google-ai/rate-limiter'
 import { enforceRateLimit } from '@/lib/ratelimit'
 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       response: text,
-      model: model || process.env.AI_MODEL || 'google/gemini-2.0-flash',
+      model: model || process.env.AI_MODEL || DEFAULT_AI_MODEL,
     })
   } catch (error: any) {
     console.error('Gemini API error:', error)
@@ -48,6 +48,6 @@ export async function GET() {
   return NextResponse.json({
     message: 'AI text generation endpoint (Vercel AI SDK)',
     usage: 'POST with { "prompt": "your prompt", "model": "optional provider/model string" }',
-    defaultModel: process.env.AI_MODEL || 'google/gemini-2.0-flash',
+    defaultModel: process.env.AI_MODEL || DEFAULT_AI_MODEL,
   })
 }
