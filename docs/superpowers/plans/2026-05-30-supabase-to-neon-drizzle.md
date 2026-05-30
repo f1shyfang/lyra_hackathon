@@ -76,9 +76,9 @@ Expected: packages added, no peer-dep errors.
 
 - [ ] **Step 2: Add `DATABASE_URL` to env files**
 
-Add to `.env.local` (value is the Neon pooled connection string provided by the user):
+Add the Neon pooled connection string the user provided to `.env.local` as `DATABASE_URL=...` (the real value is kept only in `.env.local`, which is gitignored — do not commit it to any tracked file):
 ```
-DATABASE_URL=postgresql://neondb_owner:npg_I8N7upFqMycx@ep-rapid-dream-a71elhbn-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/neondb?sslmode=require&channel_binding=require
 ```
 Add to `env.example`:
 ```
