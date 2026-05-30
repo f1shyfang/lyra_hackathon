@@ -1,9 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+import { drafts, aiPersonas, councilFeedback, type AiPersona, type CouncilFeedback } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { getPersonaCritique } from '@/lib/google-ai/client'
-import { Tables } from '@/types/supabase'
-
-type Persona = Tables<'ai_personas'>
-type CouncilFeedback = Tables<'council_feedback'>
 
 export interface CouncilProcessingResult {
   draftId: string
@@ -21,34 +19,15 @@ export async function runSimulation(
   content: string,
   iterationNumber: number = 1
 ): Promise<CouncilProcessingResult> {
-  const supabase = await createClient()
-
   // 1. Fetch draft to get image URLs
-  const { data: draft, error: draftError } = await supabase
-    .from('drafts')
-    .select('image_urls')
-    .eq('id', draftId)
-    .single()
-
-  if (draftError) {
-    throw new Error(`Failed to fetch draft: ${draftError.message}`)
-  }
+  const draft = (await db.select({ imageUrls: drafts.imageUrls }).from(drafts).where(eq(drafts.id, draftId)))[0]
+  if (!draft) throw new Error('Failed to fetch draft')
 
   // 2. Fetch all active personas
-  const { data: personas, error: personasError } = await supabase
-    .from('ai_personas')
-    .select('*')
-    .eq('active', true)
+  const personas = await db.select().from(aiPersonas).where(eq(aiPersonas.active, true))
+  if (!personas.length) throw new Error('No active personas found')
 
-  if (personasError) {
-    throw new Error(`Failed to fetch personas: ${personasError.message}`)
-  }
-
-  if (!personas || personas.length === 0) {
-    throw new Error('No active personas found')
-  }
-
-  return runSimulationWithPersonas(draftId, content, personas, draft?.image_urls as string[] | null, iterationNumber)
+  return runSimulationWithPersonas(draftId, content, personas, draft?.imageUrls ?? null, iterationNumber)
 }
 
 /**
@@ -57,21 +36,16 @@ export async function runSimulation(
 export async function runSimulationWithPersonas(
   draftId: string,
   content: string,
-  personas: Persona[],
+  personas: AiPersona[],
   imageUrls: string[] | null = null,
   iterationNumber: number = 1
 ): Promise<CouncilProcessingResult> {
-  const supabase = await createClient()
-
   if (!personas || personas.length === 0) {
     throw new Error('No personas provided')
   }
 
   // 3. Update draft status to processing
-  await supabase
-    .from('drafts')
-    .update({ status: 'processing' })
-    .eq('id', draftId)
+  await db.update(drafts).set({ status: 'processing' }).where(eq(drafts.id, draftId))
 
   // 4. Prepare multimodal content
   const multimodalContent = {
@@ -80,32 +54,23 @@ export async function runSimulationWithPersonas(
   }
 
   // 5. Parallel Processing - Call Gemini Nano for each persona
-  const critiquePromises = personas.map(async (persona: Persona) => {
+  const critiquePromises = personas.map(async (persona: AiPersona) => {
     try {
       const critique = await getPersonaCritique(
-        persona.system_prompt || '',
+        persona.systemPrompt || '',
         multimodalContent
       )
 
       // Save feedback to database
-      const { data: feedback, error: feedbackError } = await supabase
-        .from('council_feedback')
-        .insert({
-          draft_id: draftId,
-          persona_id: persona.id,
-          cringe_score: critique.cringe_score,
-          excitement_score: critique.excitement_score,
-          critique: critique.critique,
-          specific_fix: critique.specific_fix,
-          iteration_number: iterationNumber,
-        })
-        .select()
-        .single()
-
-      if (feedbackError) {
-        console.error(`Error saving feedback for persona ${persona.id}:`, feedbackError)
-        throw feedbackError
-      }
+      const feedback = (await db.insert(councilFeedback).values({
+        draftId,
+        personaId: persona.id,
+        cringeScore: critique.cringe_score,
+        excitementScore: critique.excitement_score,
+        critique: critique.critique,
+        specificFix: critique.specific_fix,
+        iterationNumber,
+      }).returning())[0]
 
       return feedback
     } catch (error) {
@@ -124,10 +89,10 @@ export async function runSimulationWithPersonas(
 
   // 4. Calculate average scores
   const avgCringeScore = Math.round(
-    validFeedback.reduce((sum, f) => sum + f.cringe_score, 0) / validFeedback.length
+    validFeedback.reduce((sum, f) => sum + f.cringeScore, 0) / validFeedback.length
   )
   const avgExcitementScore = Math.round(
-    validFeedback.reduce((sum, f) => sum + f.excitement_score, 0) / validFeedback.length
+    validFeedback.reduce((sum, f) => sum + f.excitementScore, 0) / validFeedback.length
   )
 
   // Quality score: higher excitement, lower cringe = better
@@ -139,19 +104,12 @@ export async function runSimulationWithPersonas(
   // 5. Update the draft with averages
   // Note: Status remains as 'processing' since 'completed' is not a valid enum value
   // The draft has been processed and results are available
-  const { error: updateError } = await supabase
-    .from('drafts')
-    .update({
-      avg_cringe_score: avgCringeScore,
-      avg_excitement_score: avgExcitementScore,
-      quality_score: qualityScore,
-      iteration_count: iterationNumber,
-    })
-    .eq('id', draftId)
-
-  if (updateError) {
-    throw new Error(`Failed to update draft scores: ${updateError.message}`)
-  }
+  await db.update(drafts).set({
+    avgCringeScore: avgCringeScore,
+    avgExcitementScore: avgExcitementScore,
+    qualityScore: qualityScore,
+    iterationCount: iterationNumber,
+  }).where(eq(drafts.id, draftId))
 
   return {
     draftId,
@@ -161,4 +119,3 @@ export async function runSimulationWithPersonas(
     qualityScore,
   }
 }
-
