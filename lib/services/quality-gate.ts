@@ -1,7 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
-import { Tables } from '@/types/supabase'
-
-type Draft = Tables<'drafts'>
+import { db } from '@/lib/db'
+import { drafts, type Draft } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 export interface QualityGateResult {
   passed: boolean
@@ -13,8 +12,6 @@ export interface QualityGateResult {
  * Evaluate if a draft meets quality thresholds
  */
 export async function evaluateQuality(draftId: string): Promise<QualityGateResult> {
-  const supabase = await createClient()
-
   // Get quality thresholds from environment or use defaults
   const excitementThreshold = parseInt(
     process.env.QUALITY_THRESHOLD_EXCITEMENT || '70',
@@ -26,20 +23,15 @@ export async function evaluateQuality(draftId: string): Promise<QualityGateResul
   )
 
   // Fetch draft
-  const { data: draft, error } = await supabase
-    .from('drafts')
-    .select('*')
-    .eq('id', draftId)
-    .single()
-
-  if (error || !draft) {
-    throw new Error(`Failed to fetch draft: ${error?.message || 'Draft not found'}`)
+  const draft = (await db.select().from(drafts).where(eq(drafts.id, draftId)))[0]
+  if (!draft) {
+    throw new Error('Failed to fetch draft: Draft not found')
   }
 
   // Check if draft has been processed
   if (
-    draft.avg_excitement_score === null ||
-    draft.avg_cringe_score === null
+    draft.avgExcitementScore === null ||
+    draft.avgCringeScore === null
   ) {
     return {
       passed: false,
@@ -50,20 +42,20 @@ export async function evaluateQuality(draftId: string): Promise<QualityGateResul
 
   // Evaluate quality thresholds
   const passed =
-    draft.avg_excitement_score >= excitementThreshold &&
-    draft.avg_cringe_score <= cringeThreshold
+    draft.avgExcitementScore >= excitementThreshold &&
+    draft.avgCringeScore <= cringeThreshold
 
   let reason: string | undefined
   if (!passed) {
     const issues: string[] = []
-    if (draft.avg_excitement_score < excitementThreshold) {
+    if (draft.avgExcitementScore < excitementThreshold) {
       issues.push(
-        `Excitement score ${draft.avg_excitement_score} is below threshold ${excitementThreshold}`
+        `Excitement score ${draft.avgExcitementScore} is below threshold ${excitementThreshold}`
       )
     }
-    if (draft.avg_cringe_score > cringeThreshold) {
+    if (draft.avgCringeScore > cringeThreshold) {
       issues.push(
-        `Cringe score ${draft.avg_cringe_score} is above threshold ${cringeThreshold}`
+        `Cringe score ${draft.avgCringeScore} is above threshold ${cringeThreshold}`
       )
     }
     reason = issues.join('; ')
@@ -72,13 +64,8 @@ export async function evaluateQuality(draftId: string): Promise<QualityGateResul
   // Auto-update status based on quality gate result
   const newStatus = passed ? 'approved' : 'rejected'
   if (draft.status !== newStatus) {
-    await supabase
-      .from('drafts')
-      .update({ status: newStatus })
-      .eq('id', draftId)
-    
-    // Update draft object
-    draft.status = newStatus as typeof draft.status
+    await db.update(drafts).set({ status: newStatus }).where(eq(drafts.id, draftId))
+    draft.status = newStatus
   }
 
   return {
@@ -93,11 +80,5 @@ export async function evaluateQuality(draftId: string): Promise<QualityGateResul
  */
 export async function shouldRefine(draftId: string): Promise<boolean> {
   const result = await evaluateQuality(draftId)
-  return !result.passed && (result.draft.iteration_count || 0) < 3 // Max 3 iterations
+  return !result.passed && (result.draft.iterationCount || 0) < 3 // Max 3 iterations
 }
-
-
-
-
-
-
