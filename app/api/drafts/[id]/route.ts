@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+import { drafts, councilFeedback } from '@/lib/db/schema'
+import { eq, desc } from 'drizzle-orm'
 import { uploadImages, deleteImages, extractPathFromUrl } from '@/lib/storage/image-upload'
 
 export async function GET(
@@ -9,22 +11,8 @@ export async function GET(
   try {
     const { id } = await params
 
-    const supabase = await createClient()
-
-    // Get draft with feedback
-    const { data: draft, error: draftError } = await supabase
-      .from('drafts')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (draftError) {
-      console.error('Error fetching draft:', draftError)
-      return NextResponse.json(
-        { error: `Draft not found: ${draftError.message}`, id },
-        { status: 404 }
-      )
-    }
+    // Get draft
+    const draft = (await db.select().from(drafts).where(eq(drafts.id, id)))[0]
 
     if (!draft) {
       return NextResponse.json(
@@ -33,28 +21,17 @@ export async function GET(
       )
     }
 
-    // Get feedback for this draft
-    const { data: feedback, error: feedbackError } = await supabase
-      .from('council_feedback')
-      .select(`
-        *,
-        ai_personas (
-          id,
-          name,
-          system_prompt
-        )
-      `)
-      .eq('draft_id', id)
-      .order('created_at', { ascending: false })
-
-    if (feedbackError) {
-      console.error('Error fetching feedback:', feedbackError)
-    }
+    // Get feedback for this draft (with persona)
+    const feedback = await db.query.councilFeedback.findMany({
+      where: eq(councilFeedback.draftId, id),
+      orderBy: desc(councilFeedback.createdAt),
+      with: { persona: { columns: { id: true, name: true, systemPrompt: true } } },
+    })
 
     return NextResponse.json({
       success: true,
       draft,
-      feedback: feedback || [],
+      feedback,
     })
   } catch (error) {
     console.error('Error in GET /api/drafts/[id]:', error)
@@ -72,8 +49,6 @@ export async function PATCH(
   try {
     const { id } = await params
     const contentType = request.headers.get('content-type') || ''
-
-    const supabase = await createClient()
 
     // Handle multipart/form-data (with images)
     if (contentType.includes('multipart/form-data')) {
@@ -93,13 +68,12 @@ export async function PATCH(
       }
 
       // Get current draft to manage image URLs
-      const { data: currentDraft } = await supabase
-        .from('drafts')
-        .select('image_urls')
-        .eq('id', id)
-        .single()
+      const currentDraft = (await db
+        .select({ imageUrls: drafts.imageUrls })
+        .from(drafts)
+        .where(eq(drafts.id, id)))[0]
 
-      let imageUrls: string[] = (currentDraft?.image_urls as string[] | null) || []
+      let imageUrls: string[] = currentDraft?.imageUrls ?? []
 
       // Delete specified images
       if (deleteImageUrls.length > 0) {
@@ -133,22 +107,13 @@ export async function PATCH(
         }
       }
 
-      updates.image_urls = imageUrls
+      updates.imageUrls = imageUrls
 
-      const { data: draft, error } = await supabase
-        .from('drafts')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error updating draft:', error)
-        return NextResponse.json(
-          { error: `Failed to update draft: ${error.message}` },
-          { status: 500 }
-        )
-      }
+      const draft = (await db
+        .update(drafts)
+        .set(updates)
+        .where(eq(drafts.id, id))
+        .returning())[0]
 
       if (!draft) {
         return NextResponse.json(
@@ -162,14 +127,17 @@ export async function PATCH(
       // Handle JSON (backward compatible)
       const body = await request.json()
 
-      // Only allow updating specific fields
-      const allowedFields = ['content', 'status', 'image_urls']
+      // Only allow updating specific fields (map to camelCase keys)
       const updates: Record<string, any> = {}
 
-      for (const field of allowedFields) {
-        if (field in body) {
-          updates[field] = body[field]
-        }
+      if ('content' in body) {
+        updates.content = body.content
+      }
+      if ('status' in body) {
+        updates.status = body.status
+      }
+      if ('image_urls' in body) {
+        updates.imageUrls = body.image_urls
       }
 
       if (Object.keys(updates).length === 0) {
@@ -179,20 +147,11 @@ export async function PATCH(
         )
       }
 
-      const { data: draft, error } = await supabase
-        .from('drafts')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error updating draft:', error)
-        return NextResponse.json(
-          { error: `Failed to update draft: ${error.message}` },
-          { status: 500 }
-        )
-      }
+      const draft = (await db
+        .update(drafts)
+        .set(updates)
+        .where(eq(drafts.id, id))
+        .returning())[0]
 
       if (!draft) {
         return NextResponse.json(
@@ -211,4 +170,3 @@ export async function PATCH(
     )
   }
 }
-
