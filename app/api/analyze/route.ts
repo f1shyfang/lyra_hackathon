@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { AnalyzeRequest, AnalyzeResponse } from '@/types/analyze'
 import { enforceRateLimit } from '@/lib/ratelimit'
 
-const DEFAULT_TIMEOUT_MS = 10000
+// The ML API runs on Render's free tier, which sleeps after ~15 min idle and
+// takes ~30–50s to cold-start. Allow enough headroom so the first request after
+// idle succeeds (slowly) instead of 502-ing. Override via ML_API_TIMEOUT_MS.
+const DEFAULT_TIMEOUT_MS = Number(process.env.ML_API_TIMEOUT_MS) || 60000
 const ML_API_URL = process.env.ML_API_URL || 'http://localhost:8000'
 
 export async function POST(req: NextRequest) {
