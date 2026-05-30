@@ -125,18 +125,6 @@ export const abTestEvaluationsRelations = relations(abTestEvaluations, ({ one })
   persona: one(aiPersonas, { fields: [abTestEvaluations.personaId], references: [aiPersonas.id] }),
 }))
 
-export const contactStatus = pgEnum('contact_status', ['new', 'read', 'replied'])
-
-export const contactSubmissions = pgTable('contact_submissions', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  name: text('name').notNull(),
-  email: text('email').notNull(),
-  subject: text('subject').notNull(),
-  message: text('message').notNull(),
-  status: contactStatus('status').default('new').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-})
-
 // Inferred types (replace `Tables<'x'>` from types/supabase.ts)
 export type Draft = typeof drafts.$inferSelect
 export type AiPersona = typeof aiPersonas.$inferSelect
@@ -144,4 +132,3 @@ export type CouncilFeedback = typeof councilFeedback.$inferSelect
 export type ABTest = typeof abTests.$inferSelect
 export type ABTestVariant = typeof abTestVariants.$inferSelect
 export type ABTestEvaluation = typeof abTestEvaluations.$inferSelect
-export type ContactSubmission = typeof contactSubmissions.$inferSelect
